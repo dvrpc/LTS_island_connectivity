@@ -45,7 +45,7 @@ def import_and_clip(
 
 def main():
     import_and_clip(
-        "select * from transportation.lts_network",
+        "select * from transportation.lts_network where shape notnull",
         "shape",
         full_layer_tablename="lts_full",
         clipped_layer_tablename="lts_clipped",
