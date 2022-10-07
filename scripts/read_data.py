@@ -7,54 +7,62 @@ and inserts it into a Postgres database.
 Requires geo-enabled postgres database (CREATE EXTENSION postgis;)
 """
 
+from cmath import exp
 import geopandas as gpd
 from geoalchemy2 import WKTElement
-from env_vars import ENGINE
+from env_vars import ENGINE, GIS_ENGINE, db, gis_db
+from pg_data_etl import Database
+import os
+from pathlib import Path
 
 
-def read_lts():
-    print("Gathering LTS Network")
-    # import from GIS portal
-    gdf = gpd.read_file(
-        "https://opendata.arcgis.com/datasets/553b8f833da94bec99e64a28be12f34d_0.geojson"
+mask_layer = gis_db.gdf(
+    """
+    select * from boundaries.municipalboundaries m 
+    where mun_name like 'Evesham Township'
+    or mun_name like 'Maple Shade Township'
+    or mun_name like 'Mansfield Township'
+    and co_name = 'Burlington'""",
+    geom_col="shape",
+)
+mask_layer = mask_layer.to_crs(26918)
+
+
+def import_and_clip(
+    sql_query=str,
+    geom_col=str,
+    full_layer_tablename=str,
+    clipped_layer_tablename=str,
+    gpd_kwargs={"if_exists": "replace"},
+):
+    gdf = gis_db.gdf(sql_query, geom_col)
+    gdf = gdf.to_crs(26918)
+    clipped = gpd.clip(gdf, mask_layer)
+    print(f"importing {full_layer_tablename}, please wait...")
+    db.import_geodataframe(
+        gdf, full_layer_tablename, explode=True, gpd_kwargs={"if_exists": "replace"}
     )
-
-    # remove null geometries
-    gdf = gdf[gdf.geometry.notnull()]
-
-    # transform projection from 4326 to 26918
-    gdf = gdf.to_crs(epsg=26918)
-
-    # create geom column for postgis import
-    gdf["geom"] = gdf["geometry"].apply(lambda x: WKTElement(x.wkt, srid=26918))
-
-    # write geodataframe to postgis
-    gdf.to_postgis("lts_network", con=ENGINE, if_exists="replace")
-
-
-def read_ipd():
-    print("Gathering IPD Tracts")
-    # import from GIS portal
-    gdf = gpd.read_file(
-        "https://opendata.arcgis.com/datasets/60d8d376bbd942088b64a34794ef68ca_0.geojson"
+    print(f"clipping {full_layer_tablename}, please wait...")
+    db.import_geodataframe(
+        clipped, clipped_layer_tablename, gpd_kwargs=gpd_kwargs, explode=True
     )
-
-    # remove null geometries
-    gdf = gdf[gdf.geometry.notnull()]
-
-    # transform projection from 4326 to 26918
-    gdf = gdf.to_crs(epsg=26918)
-
-    # create geom column for postgis import
-    gdf["geom"] = gdf["geometry"].apply(lambda x: WKTElement(x.wkt, srid=26918))
-
-    # write geodataframe to postgis
-    gdf.to_postgis("ipd_tracts", con=ENGINE, if_exists="replace")
 
 
 def main():
-    read_lts()
-    read_ipd()
+    import_and_clip(
+        "select * from transportation.lts_network",
+        "shape",
+        full_layer_tablename="lts_full",
+        clipped_layer_tablename="lts_clipped",
+        gpd_kwargs={"if_exists": "replace"},
+    )
+    import_and_clip(
+        "select * from demographics.ipd_2020",
+        "shape",
+        full_layer_tablename="ipd_2020",
+        clipped_layer_tablename="ipd_2020_clipped",
+        gpd_kwargs={"if_exists": "replace"},
+    )
 
 
 if __name__ == "__main__":
