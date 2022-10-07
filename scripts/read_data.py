@@ -7,13 +7,8 @@ and inserts it into a Postgres database.
 Requires geo-enabled postgres database (CREATE EXTENSION postgis;)
 """
 
-from cmath import exp
 import geopandas as gpd
-from geoalchemy2 import WKTElement
 from env_vars import ENGINE, GIS_ENGINE, db, gis_db
-from pg_data_etl import Database
-import os
-from pathlib import Path
 
 
 mask_layer = gis_db.gdf(
