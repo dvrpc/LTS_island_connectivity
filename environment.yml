@@ -16,7 +16,7 @@ dependencies:
   - black
   - flake8
   - jupyterlab
-  - numpy
+  - numpy ==1.22.4
   - folium
   - python-dotenv
   - networkx
