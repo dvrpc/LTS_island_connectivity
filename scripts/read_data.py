@@ -44,35 +44,47 @@ def import_and_clip(
     )
 
 
+def make_low_stress_lts():
+    gdf = db.gdf(
+        "select * from lts_clipped where lts_score::int < 3",
+        geom_col="geom",
+    )
+    gdf = gdf.drop(columns=["level_0"])
+    db.import_geodataframe(
+        gdf, "low_stress_network", gpd_kwargs={"if_exists": "replace"}
+    )
+
+
 def main():
-    import_and_clip(
-        "select * from transportation.lts_network where shape notnull",
-        "shape",
-        full_layer_tablename="lts_full",
-        clipped_layer_tablename="lts_clipped",
-        gpd_kwargs={"if_exists": "replace"},
-    )
-    import_and_clip(
-        "select * from demographics.ipd_2020",
-        "shape",
-        full_layer_tablename="ipd_2020",
-        clipped_layer_tablename="ipd_2020_clipped",
-        gpd_kwargs={"if_exists": "replace"},
-    )
-    import_and_clip(
-        "select * from transportation.pedestriannetwork_lines",
-        "shape",
-        full_layer_tablename="ped_network",
-        clipped_layer_tablename="ped_network_clipped",
-        gpd_kwargs={"if_exists": "replace"},
-    )
-    import_and_clip(
-        "select * from boundaries.municipalboundaries",
-        "shape",
-        full_layer_tablename="municipalboundaries",
-        clipped_layer_tablename="municipalboundaries_clipped",
-        gpd_kwargs={"if_exists": "replace"},
-    )
+    #     import_and_clip(
+    #         "select * from transportation.lts_network where shape notnull",
+    #         "shape",
+    #         full_layer_tablename="lts_full",
+    #         clipped_layer_tablename="lts_clipped",
+    #         gpd_kwargs={"if_exists": "replace"},
+    #     )
+    #     import_and_clip(
+    #         "select * from demographics.ipd_2020",
+    #         "shape",
+    #         full_layer_tablename="ipd_2020",
+    #         clipped_layer_tablename="ipd_2020_clipped",
+    #         gpd_kwargs={"if_exists": "replace"},
+    #     )
+    #     import_and_clip(
+    #         "select * from transportation.pedestriannetwork_lines",
+    #         "shape",
+    #         full_layer_tablename="ped_network",
+    #         clipped_layer_tablename="ped_network_clipped",
+    #         gpd_kwargs={"if_exists": "replace"},
+    #     )
+    #     import_and_clip(
+    #         "select * from boundaries.municipalboundaries",
+    #         "shape",
+    #         full_layer_tablename="municipalboundaries",
+    #         clipped_layer_tablename="municipalboundaries_clipped",
+    #         gpd_kwargs={"if_exists": "replace"},
+    #     )
+    make_low_stress_lts()
 
 
 if __name__ == "__main__":
