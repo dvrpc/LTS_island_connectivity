@@ -29,13 +29,14 @@ def import_and_clip(
     full_layer_tablename=str,
     clipped_layer_tablename=str,
     gpd_kwargs={"if_exists": "replace"},
+    explode=True,
 ):
     gdf = gis_db.gdf(sql_query, geom_col)
     gdf = gdf.to_crs(26918)
-    clipped = gpd.clip(gdf, mask_layer)
+    clipped = gpd.clip(gdf, mask_layer, keep_geom_type=True)
     print(f"importing {full_layer_tablename}, please wait...")
     db.import_geodataframe(
-        gdf, full_layer_tablename, explode=True, gpd_kwargs={"if_exists": "replace"}
+        gdf, full_layer_tablename, explode=explode, gpd_kwargs={"if_exists": "replace"}
     )
     print(f"clipping {full_layer_tablename}, please wait...")
     db.import_geodataframe(
@@ -56,6 +57,20 @@ def main():
         "shape",
         full_layer_tablename="ipd_2020",
         clipped_layer_tablename="ipd_2020_clipped",
+        gpd_kwargs={"if_exists": "replace"},
+    )
+    import_and_clip(
+        "select * from transportation.pedestriannetwork_lines",
+        "shape",
+        full_layer_tablename="ped_network",
+        clipped_layer_tablename="ped_network_clipped",
+        gpd_kwargs={"if_exists": "replace"},
+    )
+    import_and_clip(
+        "select * from boundaries.municipalboundaries",
+        "shape",
+        full_layer_tablename="municipalboundaries",
+        clipped_layer_tablename="municipalboundaries_clipped",
         gpd_kwargs={"if_exists": "replace"},
     )
 
