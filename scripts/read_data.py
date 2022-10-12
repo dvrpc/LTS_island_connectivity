@@ -11,18 +11,6 @@ import geopandas as gpd
 from env_vars import ENGINE, GIS_ENGINE, db, gis_db
 
 
-mask_layer = gis_db.gdf(
-    """
-    select * from boundaries.municipalboundaries m 
-    where mun_name like 'Evesham Township'
-    or mun_name like 'Maple Shade Township'
-    or mun_name like 'Mansfield Township'
-    and co_name = 'Burlington'""",
-    geom_col="shape",
-)
-mask_layer = mask_layer.to_crs(26918)
-
-
 list_of_geos_to_clip = []
 
 
@@ -41,13 +29,42 @@ def import_data(
     list_of_geos_to_clip.append(full_layer_tablename)
 
 
-def make_low_stress_lts():
-    gdf = db.gdf(
-        "select * from lts_clipped where lts_score::int < 3",
+def make_mask():
+    mask_layer = db.gdf(
+        """
+        select index, mun_name, co_name, mun_type, landareaac, sq_feet, acres, geom from municipalboundaries  
+        where mun_name like 'Evesham Township'
+        or mun_name like 'Maple Shade Township'
+        or mun_name like 'Mansfield Township'
+        and co_name = 'Burlington'""",
         geom_col="geom",
     )
+    mask_layer = mask_layer.to_crs(26918)
+    return mask_layer
+
+
+def clip_to_studyarea(table=str):
+    print(f"clipping {table} to study area")
+    db.execute(
+        f"""
+        drop table if exists {table}_clipped;
+        create table {table}_clipped as(
+            select a.* from {table} a
+            inner join studyarea b
+            on st_within(a.geom, b.geom)
+            )
+        """
+    )
+
+
+def make_low_stress_lts():
+    gdf = db.gdf(
+        "select * from lts_full_clipped where lts_score::int < 3",
+        geom_col="geom",
+    )
+    gdf = gdf.drop(columns=["level_0"])
     db.import_geodataframe(
-        gdf, "low_stress_network", gpd_kwargs={"if_exists": "replace"}
+        gdf, "lts_full_clipped_ls", gpd_kwargs={"if_exists": "replace"}
     )
 
 
@@ -73,8 +90,12 @@ def main():
         "shape",
         full_layer_tablename="municipalboundaries",
     )
-    print(list_of_geos_to_clip)
-    # make_low_stress_lts()
+    db.execute("drop table if exists studyarea")
+    db.import_geodataframe(make_mask(), "studyarea")
+
+    clip_to_studyarea("ped_network")
+    clip_to_studyarea("lts_full")
+    make_low_stress_lts()
 
 
 if __name__ == "__main__":
