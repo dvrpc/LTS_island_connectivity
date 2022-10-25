@@ -57,14 +57,15 @@ def clip_to_studyarea(table=str):
     )
 
 
-def make_low_stress_lts():
+def make_low_stress_lts(lts_level=3):
+    """Make a low stress network based on a certain threshold. Returns LTS network with all segments below specified lts_level."""
     gdf = db.gdf(
-        "select * from lts_full_clipped where lts_score::int < 3",
+        f"select * from lts_full where lts_score::int < {lts_level}",
         geom_col="geom",
     )
     gdf = gdf.drop(columns=["level_0"])
     db.import_geodataframe(
-        gdf, "lts_full_clipped_ls", gpd_kwargs={"if_exists": "replace"}
+        gdf, f"lts_stress_below_{lts_level}", gpd_kwargs={"if_exists": "replace"}
     )
 
 
@@ -93,9 +94,11 @@ def main():
     db.execute("drop table if exists studyarea")
     db.import_geodataframe(make_mask(), "studyarea")
 
-    clip_to_studyarea("ped_network")
-    clip_to_studyarea("lts_full")
-    make_low_stress_lts()
+    # clip_to_studyarea("ped_network") do we need to clip?
+    # clip_to_studyarea("lts_full")
+    make_low_stress_lts(4)
+    make_low_stress_lts(3)
+    make_low_stress_lts(2)
 
 
 if __name__ == "__main__":
