@@ -51,6 +51,13 @@ def main():
         full_layer_tablename="ipd_2020",
     )
     import_data(
+        """select * from demographics.deccen_2020_block db 
+            inner join demographics.census_blocks_2020 cb
+            on cb.geoid = db.geocode""",
+        "shape",
+        full_layer_tablename="censusblock2020_demographics",
+    )
+    import_data(
         "select * from transportation.pedestriannetwork_lines",
         "shape",
         full_layer_tablename="ped_network",
