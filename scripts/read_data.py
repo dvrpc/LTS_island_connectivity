@@ -11,9 +11,6 @@ import geopandas as gpd
 from env_vars import ENGINE, GIS_ENGINE, db, gis_db
 
 
-list_of_geos_to_clip = []
-
-
 def import_data(
     sql_query=str,
     geom_col=str,
@@ -25,35 +22,6 @@ def import_data(
     gdf = gdf.to_crs(26918)
     db.import_geodataframe(
         gdf, full_layer_tablename, explode=explode, gpd_kwargs={"if_exists": "replace"}
-    )
-    list_of_geos_to_clip.append(full_layer_tablename)
-
-
-def make_mask():
-    mask_layer = db.gdf(
-        """
-        select index, mun_name, co_name, mun_type, landareaac, sq_feet, acres, geom from municipalboundaries  
-        where mun_name like 'Evesham Township'
-        or mun_name like 'Maple Shade Township'
-        or mun_name like 'Mansfield Township'
-        and co_name = 'Burlington'""",
-        geom_col="geom",
-    )
-    mask_layer = mask_layer.to_crs(26918)
-    return mask_layer
-
-
-def clip_to_studyarea(table=str):
-    print(f"clipping {table} to study area")
-    db.execute(
-        f"""
-        drop table if exists {table}_clipped;
-        create table {table}_clipped as(
-            select a.* from {table} a
-            inner join studyarea b
-            on st_within(a.geom, b.geom)
-            )
-        """
     )
 
 
@@ -92,8 +60,6 @@ def main():
         "shape",
         full_layer_tablename="municipalboundaries",
     )
-    db.execute("drop table if exists studyarea")
-    db.import_geodataframe(make_mask(), "studyarea")
 
     make_low_stress_lts(4)
     make_low_stress_lts(3)
