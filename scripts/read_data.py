@@ -38,8 +38,7 @@ def make_low_stress_lts(lts_level=3):
     )
 
 
-def main():
-
+if __name__ == "__main__":
     import_data(
         "select * from transportation.lts_network where typeno != '22' and typeno != '82'",
         "shape",
@@ -51,7 +50,7 @@ def main():
         full_layer_tablename="ipd_2020",
     )
     import_data(
-        """select * from demographics.deccen_2020_block db 
+        """select * from demographics.deccen_2020_block db
             inner join demographics.census_blocks_2020 cb
             on cb.geoid = db.geocode""",
         "shape",
@@ -67,11 +66,12 @@ def main():
         "shape",
         full_layer_tablename="municipalboundaries",
     )
+    import_data(
+        "select * from planning.eta_essentialservicespts",
+        "shape",
+        full_layer_tablename="essential_services",
+    )
 
     make_low_stress_lts(4)
     make_low_stress_lts(3)
     make_low_stress_lts(2)
-
-
-if __name__ == "__main__":
-    main()
