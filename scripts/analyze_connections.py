@@ -51,30 +51,50 @@ def generate_proximate_blobs(islands_table):
     )
 
 
-def pull_population():
+def pull_stat(column: str, table: str, geom_type: str):
     """
-    grabs the sum of population within the study area blobs, using census blocks.
+    grabs the identified attribute (population, school, etc) within the study area blobs.\
+    
+    :param str column: the column you want to pull data from in your database
+    :param str table: the table you want to pull data from in your database
+    :param str geom_type: the type (point, line, or polygon) of your data
+
+    todo: 
+    add line type handler
     """
-    gdf = db.gdf(
-        """select 
-            a.totpop2020,
-                b.*, 
-                st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) as pct_overlap,
-                round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * totpop2020) as tot_pop_weighted
-            from censusblock2020_demographics a, blobs b 
-            where st_intersects(a.geom, b.geom)
+    geom_type = geom_type.lower()
+
+    if geom_type == "polygon":
+        gdf = db.gdf(
+            f"""select 
+                a.{column},
+                    b.*, 
+                    st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) as pct_overlap,
+                    round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * {column}) as {column}_in_blobs
+                from {table} a, blobs b 
+                where st_intersects(a.geom, b.geom)
     """,
-        "geom",
-    )
-    sum_pop = round(gdf["tot_pop_weighted"].sum())
-    return sum_pop
+            "geom",
+        )
+        sum_poly = round(gdf[f"{column}_in_blobs"].sum())
+        return sum_poly
+
+    if geom_type == "point":
+        gdf = db.gdf(
+            f"""select 
+                a.{column},
+                    b.*
+                from {table} a, blobs b 
+                where st_intersects(a.geom, b.geom)"""
+        )
+
+        # sums the points in all blobs along study area
+        point_sum = len(gdf.index)
+        return point_sum
 
 
 create_study_segment("lts2gaps")
 generate_proximate_blobs("lts_1_2_islands")
-print(pull_population())
 
-
-# pseduocode / todo
-
-# bigger idea: run this for every single gap in a study area, return a table of gaps prioritized by x factor
+print(pull_stat("type", "essential_services", "point"))
+print(pull_stat("totpop2020", "censusblock2020_demographics", "polygon"))
