@@ -43,7 +43,7 @@ def generate_proximate_blobs(islands_table):
     """
     db.execute(
         f"""drop table if exists blobs;
-        create table blobs as(    
+            create table blobs as(    
             select st_convexhull(a.geom) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
                 from data_viz.{islands_table} a 
                 inner join study_segment b
@@ -51,11 +51,30 @@ def generate_proximate_blobs(islands_table):
     )
 
 
+def pull_population():
+    """
+    grabs the sum of population within the study area blobs, using census blocks.
+    """
+    gdf = db.gdf(
+        """select 
+            a.totpop2020,
+                b.*, 
+                st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) as pct_overlap,
+                round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * totpop2020) as tot_pop_weighted
+            from censusblock2020_demographics a, blobs b 
+            where st_intersects(a.geom, b.geom)
+    """,
+        "geom",
+    )
+    sum_pop = round(gdf["tot_pop_weighted"].sum())
+    return sum_pop
+
+
 create_study_segment("lts2gaps")
 generate_proximate_blobs("lts_1_2_islands")
+print(pull_population())
 
 
 # pseduocode / todo
-# convex hull around each island, grab census block data
-# return report of how many people
+
 # bigger idea: run this for every single gap in a study area, return a table of gaps prioritized by x factor
