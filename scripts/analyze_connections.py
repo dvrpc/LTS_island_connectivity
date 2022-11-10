@@ -38,17 +38,24 @@ def create_study_segment(lts_gaps_table):
 
 
 def generate_proximate_blobs(islands_table):
-    """evaluates which islands touch the study segment.
+    """evaluates which islands touch the study segment. returns total mileage of low-stress islands connected by new study_segment.
     islands_table is the table that includes the islands you want to look at (e.g. lts_1_2_islands for islands that include lts 1 and 2)
+
     """
-    db.execute(
-        f"""drop table if exists blobs;
-            create table blobs as(    
-            select st_convexhull(a.geom) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
+    db.execute("drop table if exists blobs")
+    gdf = db.gdf(
+        f"""select st_convexhull(a.geom) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
                 from data_viz.{islands_table} a 
                 inner join study_segment b
-                on st_intersects(a.geom,b.geom))"""
+                on st_intersects(a.geom,b.geom)
+                where geometrytype(st_convexhull(a.geom)) = 'POLYGON'""",
+        geom_col="geom",
     )
+    db.import_geodataframe(
+        gdf, "blobs", gpd_kwargs={"if_exists": "replace"}, explode=True
+    )
+    mileage = gdf["size_miles"].sum()
+    return round(mileage)
 
 
 def pull_stat(column: str, table: str, geom_type: str):
@@ -91,7 +98,7 @@ def pull_stat(column: str, table: str, geom_type: str):
 
 
 create_study_segment("lts2gaps")
-generate_proximate_blobs("lts_1_2_islands")
+print(generate_proximate_blobs("lts_1_2_islands"))
 
 print(pull_stat("type", "essential_services", "point"))
 print(pull_stat("totpop2020", "censusblock2020_demographics", "polygon"))
