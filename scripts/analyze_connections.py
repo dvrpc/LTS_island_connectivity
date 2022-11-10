@@ -80,17 +80,14 @@ def pull_stat(column: str, table: str, geom_type: str):
         return sum_poly
 
     if geom_type == "point":
-        gdf = db.gdf(
-            f"""select 
-                a.{column},
-                    b.*
-                from {table} a, blobs b 
-                where st_intersects(a.geom, b.geom)"""
+        df = db.df(
+            f"""select count(a.{column}), a.{column} from {table} a, blobs b
+                where st_intersects(a.geom, b.geom)
+                group by a.{column}"""
         )
-
-        # sums the points in all blobs along study area
-        point_sum = len(gdf.index)
-        return point_sum
+        # zips up dataframe containing count by column attribute of point
+        df_dict = df.to_dict("records")
+        return df_dict
 
 
 create_study_segment("lts2gaps")
