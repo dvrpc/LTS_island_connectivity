@@ -2,21 +2,42 @@ import geopandas as gpd
 from env_vars import db, gis_db
 
 # input a collection of segments from the desired "gap" layer, i.e. your study area segment.
-# perhaps use create or replace view here? so it can be updated dynamically
-# use st_collect here to generate a unified segment
 
-
+# study_segment_uids = (
+#     463947,
+#     463954,
+#     463958,
+#     466686,
+#     490605,
+#     215362,
+#     215363,
+#     215365,
+#     217928,
+#     241799,
+# )
 study_segment_uids = (
-    463947,
-    463954,
-    463958,
-    466686,
-    490605,
-    215362,
-    215363,
-    215365,
-    217928,
-    241799,
+    323,
+    324,
+    325,
+    326,
+    327,
+    245458,
+    245459,
+    245580,
+    245581,
+    245582,
+    245583,
+    245584,
+    248834,
+    248835,
+    248836,
+    248837,
+    248838,
+    248839,
+    248840,
+    494299,
+    494300,
+    494301,
 )
 
 
@@ -28,6 +49,7 @@ def create_study_segment(lts_gaps_table):
     (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
     """
 
+    # maybe remove gaps table and just pull from full network here
     db.execute(
         f"""drop table if exists study_segment;
             create table study_segment as 
