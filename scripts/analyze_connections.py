@@ -66,7 +66,7 @@ def generate_proximate_blobs(islands_table):
     """
     db.execute("drop table if exists blobs")
     gdf = db.gdf(
-        f"""select st_convexhull(a.geom) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
+        f"""select st_concavehull(a.geom, .8) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
                 from data_viz.{islands_table} a 
                 inner join study_segment b
                 on st_intersects(a.geom,b.geom)
