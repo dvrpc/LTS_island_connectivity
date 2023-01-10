@@ -5,10 +5,7 @@ const setup_click = (map) => {
       featurelist.push(`${feature.properties.id}`);
     });
     console.log(featurelist);
-    document.getElementById(
-      "box"
-    ).innerHTML = `Segment ids: <br> ${featurelist}`;
+    document.getElementById("segids").innerHTML = `${featurelist}`;
   });
 };
-
 export { setup_click };

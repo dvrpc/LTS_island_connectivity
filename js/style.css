@@ -4,54 +4,28 @@
   bottom: 0;
   width: 100%;
 }
-#header {
-  position: absolute;
-  z-index: 1;
-  width: 80% vw;
-  background-color: rgb(1, 1, 1);
-  color: rgb(201, 201, 201);
-  padding: 20px;
-  font-family: "Roboto", sans-serif;
-  font-weight: normal;
-  font-size: 100%;
-}
-
-.bolded {
-  font-weight: bold;
-}
-
-body {
-  background: #1d1f20;
-  padding: 0px;
-  width: 25%;
-  height: 100%;
-}
-#routedesc {
-  position: absolute;
-  text-align: center;
-  z-index: 1;
-  width: 80%;
-  height: 70%;
-  bottom: 0px;
-  background-color: rgba(1, 1, 1, 0);
-  color: rgb(201, 201, 201);
-  padding: 20px;
-  font-family: "Roboto", sans-serif;
-  font-weight: normal;
-  font-size: 100%;
-}
 
 #box {
   background-color: rgb(0, 112, 116);
   color: rgb(255, 255, 255);
   z-index: 0;
-  position: absolute;
-  width: 100% vw;
+  position: fixed;
+  left: 20px;
+  top: 20px;
+  height: 20 px;
+  width: 15vw;
   border: 2px solid rgba(255, 255, 255, 0.86);
   padding: 5px;
-  margin: 20px;
   font-family: "Roboto", sans-serif;
   font-weight: normal;
   font-size: 100%;
   border-radius: 5px;
+}
+
+#segids {
+  background-color: rgb(236, 243, 243);
+  overflow-x: scroll;
+  overflow-y: scroll;
+  color: rgb(39, 38, 38);
+  font-family: "Roboto", sans-serif;
 }
