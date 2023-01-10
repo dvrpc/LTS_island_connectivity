@@ -1,5 +1,5 @@
 import { makemap } from "./map.js";
-import { setup_hover } from "./interacton.js";
+import { setup_click } from "./interacton.js";
 let map = makemap();
 map.on("load", () => {
   // LOAD DATA: add vector tileset from DVRPC's server
@@ -29,7 +29,7 @@ map.on("load", () => {
       },
     },
   });
-  setup_hover(map);
+  setup_click(map);
 });
 
 export { map };

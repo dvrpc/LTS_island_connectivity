@@ -1,4 +1,4 @@
-const setup_hover = (map) => {
+const setup_click = (map) => {
   map.on("click", "lts", (e) => {
     let featurelist = [];
     e.features.forEach((feature) => {
@@ -11,4 +11,4 @@ const setup_hover = (map) => {
   });
 };
 
-export { setup_hover };
+export { setup_click };
