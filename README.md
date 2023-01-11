@@ -2,6 +2,9 @@
 
 New approach to LTS Network Connectivity
 
+Webmap for segment selection:
+[Link](https://mmorley0395.github.io/LTS_island_connectivity/)
+
 ## TODO
 
 :white_check_mark: import data scripts
