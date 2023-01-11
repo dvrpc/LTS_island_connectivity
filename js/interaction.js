@@ -1,28 +1,34 @@
 const featurelist = [];
 
 const setup_click = (map) => {
-  map.on("click", "lts", (e) => {
+  map.on("click", "clicked", (e) => {
     e.features.forEach((feature) => {
-      if (featurelist.includes(`${feature.properties.id}`)) {
-        var index = featurelist.indexOf(`${feature.properties.id}`);
+      if (featurelist.includes(feature.id)) {
+        var index = featurelist.indexOf(feature.id);
         if (index > -1) {
-          // only splice array when item is found
-          featurelist.splice(index, 1); // 2nd parameter means remove one item only
+          featurelist.splice(index, 1);
         }
-      } else {
-        featurelist.push(`${feature.properties.id}`);
         map.setFeatureState(
           {
             source: "lts_tile",
-            id: feature.properties.id,
-            sourceLayer: "clicked",
+            id: feature.id,
+            sourceLayer: "existing_conditions_lts",
           },
           { click: false }
+        );
+      } else {
+        featurelist.push(feature.id);
+        map.setFeatureState(
+          {
+            source: "lts_tile",
+            id: feature.id,
+            sourceLayer: "existing_conditions_lts",
+          },
+          { click: true }
         );
       }
       document.getElementById("segids").innerHTML = `${featurelist}`;
     });
-    console.log(featurelist);
   });
 };
 export { setup_click };

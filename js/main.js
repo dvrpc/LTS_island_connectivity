@@ -8,7 +8,7 @@ map.on("load", () => {
     type: "vector",
     url: "https://www.tiles.dvrpc.org/data/lts.json",
     minzoom: 8,
-    generateId: true,
+    promoteId: "id",
   });
 
   map.addLayer({
@@ -40,9 +40,9 @@ map.on("load", () => {
       "line-width": 5,
       "line-opacity": [
         "case",
-        ["boolean", ["feature-state", "click"], true],
-        0,
+        ["boolean", ["feature-state", "click"], false],
         1,
+        0,
       ],
       "line-color": "light blue",
     },
