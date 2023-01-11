@@ -1,5 +1,5 @@
 import { makemap } from "./map.js";
-import { setup_click } from "./interacton.js";
+import { setup_click } from "./interaction.js";
 let map = makemap();
 map.on("load", () => {
   // LOAD DATA: add vector tileset from DVRPC's server
@@ -29,6 +29,24 @@ map.on("load", () => {
       },
     },
   });
+
+  map.addLayer({
+    id: "clicked",
+    type: "line",
+    source: "lts_tile",
+    "source-layer": "existing_conditions_lts",
+    paint: {
+      "line-width": 5,
+      "line-opacity": [
+        "case",
+        ["boolean", ["feature-state", "click"], true],
+        0,
+        1,
+      ],
+      "line-color": "blue",
+    },
+  });
+
   setup_click(map);
 });
 

@@ -14,7 +14,6 @@ const setup_click = (map) => {
   map.on("click", "lts", (e) => {
     e.features.forEach((feature) => {
       if (featurelist.includes(`${feature.properties.id}`)) {
-        console.log(`okay dummy, ${feature.properties.id} needs to go.`);
         var index = featurelist.indexOf(`${feature.properties.id}`);
         if (index > -1) {
           // only splice array when item is found
@@ -23,6 +22,14 @@ const setup_click = (map) => {
       } else {
         featurelist.push(`${feature.properties.id}`);
         console.log(feature);
+        map.setFeatureState(
+          {
+            source: "lts_tile",
+            id: feature.properties.id,
+            sourceLayer: "clicked",
+          },
+          { click: false }
+        );
       }
       document.getElementById("segids").innerHTML = `${featurelist}`;
       console.log(featurelist);
