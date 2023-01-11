@@ -37,11 +37,11 @@ map.on("load", () => {
     source: "lts_tile",
     "source-layer": "existing_conditions_lts",
     paint: {
-      "line-width": 5,
+      "line-width": 15,
       "line-opacity": [
         "case",
         ["boolean", ["feature-state", "click"], false],
-        1,
+        0.7,
         0,
       ],
       "line-color": "light blue",
