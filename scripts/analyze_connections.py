@@ -118,9 +118,8 @@ def pull_stat(column: str, table: str, geom_type: str):
         df_dict = df.to_dict("records")
         return df_dict
 
-
-create_study_segment("lts2gaps")
-print(generate_proximate_blobs("lts_1_2_islands"))
-
-print(pull_stat("type", "essential_services", "point"))
-print(pull_stat("totpop2020", "censusblock2020_demographics", "polygon"))
+if __name__ == "__main__":
+    create_study_segment("lts2gaps")
+    print(generate_proximate_blobs("lts_1_2_islands"))
+    print(pull_stat("type", "essential_services", "point"))
+    print(pull_stat("totpop2020", "censusblock2020_demographics", "polygon"))
