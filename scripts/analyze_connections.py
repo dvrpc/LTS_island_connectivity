@@ -2,48 +2,75 @@ import geopandas as gpd
 from env_vars import db, gis_db
 
 # input a collection of segments from the desired "gap" layer, i.e. your study area segment.
-
-# study_segment_uids = (
-#     463947,
-#     463954,
-#     463958,
-#     466686,
-#     490605,
-#     215362,
-#     215363,
-#     215365,
-#     217928,
-#     241799,
-# )
-study_segment_uids = (
-    323,
-    324,
-    325,
-    326,
-    327,
-    245458,
-    245459,
-    245580,
-    245581,
-    245582,
-    245583,
-    245584,
-    248834,
-    248835,
-    248836,
-    248837,
-    248838,
-    248839,
-    248840,
-    494299,
-    494300,
-    494301,
+dvrpc_ids = (
+    578711,
+    578712,
+    408624,
+    408623,
+    449502,
+    449501,
+    449506,
+    449505,
+    449503,
+    449504,
+    449511,
+    449512,
+    449510,
+    449509,
+    449508,
+    449507,
+    399718,
+    399717,
+    399763,
+    399764,
+    399730,
+    399729,
+    399671,
+    399672,
+    449514,
+    449513,
+    402969,
+    402970,
+    399782,
+    399781,
+    399740,
+    399739,
+    402968,
+    402967,
+    399722,
+    399721,
+    399773,
+    399774,
+    449516,
+    449515,
+    449518,
+    449517,
+    421871,
+    421872,
+    449522,
+    449521,
+    449520,
+    449519,
+    405807,
+    405808,
+    418490,
+    418489,
+    449526,
+    449525,
+    402964,
+    402963,
+    410816,
+    410815,
+    449523,
+    449524,
+    405806,
+    405805,
 )
 
 
 def create_study_segment(lts_gaps_table):
 
-    # todo: consider how dynamic selection will work in web app. clicking segments will probably add/remove values from study_segment_uids list
+    # todo: consider how dynamic selection will work in web app. clicking segments will probably add/remove values from dvrpc_ids list
     """Creates a study segment based on uids.
     lts_gaps_table = the table with appropriate gaps for that island selection
     (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
@@ -54,7 +81,7 @@ def create_study_segment(lts_gaps_table):
         f"""drop table if exists study_segment;
             create table study_segment as 
                 select st_collect(geom) as geom, avg(lts_score::int) 
-                from {lts_gaps_table} where uid in {study_segment_uids};
+                from {lts_gaps_table} where dvrpc_id in {dvrpc_ids};
         """
     )
 
@@ -117,6 +144,7 @@ def pull_stat(column: str, table: str, geom_type: str):
         # zips up dataframe containing count by column attribute of point
         df_dict = df.to_dict("records")
         return df_dict
+
 
 if __name__ == "__main__":
     create_study_segment("lts2gaps")

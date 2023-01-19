@@ -40,7 +40,7 @@ def make_low_stress_lts(lts_level=3):
 
 if __name__ == "__main__":
     import_data(
-        "select * from transportation.lts_network where typeno != '22' and typeno != '82'",
+            "select *, gid as dvrpc_id from transportation.lts_network where typeno != '22' and typeno != '82'",
         "shape",
         full_layer_tablename="lts_full",
     )
