@@ -4,7 +4,9 @@ channels:
 dependencies:
   - python=3.9*
   - pyproj<3
-  - geopandas<0.9
+  - geopandas
+  - osmnx
+  - pandana
   - psycopg2
   - geoalchemy2
   - matplotlib
@@ -14,10 +16,12 @@ dependencies:
   - black
   - flake8
   - jupyterlab
-  - numpy
+  - numpy ==1.22.4
   - folium
-  - pip
   - python-dotenv
   - networkx
+  - tqdm
+  - pip
   - pip:
-      - --editable .
+      - git+https://github.com/mmorley0395/pg-data-etl
+      - git+https://github.com/dvrpc/network-routing.git

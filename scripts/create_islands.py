@@ -10,14 +10,14 @@ writes a new table with island numbers to postgres.
 import geopandas as gpd
 from geoalchemy2 import WKTElement
 from numpy import full
-from env_vars import ENGINE
+from env_vars import ENGINE, gis_db, db
 import networkx as nx
 import pandas as pd
 
 
 def read_network():
     # eventually might want typeno to get rid of highways and ramps
-    ls_network = gpd.read_postgis(
+    ls_network = db.gdf(
         """
             SELECT 
                 objectid,
@@ -29,12 +29,10 @@ def read_network():
             WHERE linklts <> 'LTS 3'
             AND linklts <> 'LTS 4' ;
             """,
-        con=ENGINE,
         geom_col="geometry",
     )
 
-
-    return (ls_network)
+    return ls_network
 
 
 # format link subset so networkx can read it
@@ -69,13 +67,11 @@ def identify_islands(ls_network):
     islands_df = pd.DataFrame(results)
     islands_df.columns = ["id", "fn", "tn", "island"]
 
-    islands_df.to_sql(
-        "lts_network_islands", con=ENGINE, if_exists="replace"
-    )
+    islands_df.to_sql("lts_network_islands", con=ENGINE, if_exists="replace")
     print("To database: Complete")
 
-    #create new table with islands and geometry so it can be mapped
-    q="""
+    # create new table with islands and geometry so it can be mapped
+    q = """drop table if exists islands;
         create table islands AS(
         select lni.*, ln2.geometry, ln2.geom  
         from lts_network_islands lni 
@@ -85,9 +81,7 @@ def identify_islands(ls_network):
         ;
             """
 
-
-
-    #create indecies for faster queries
+    # create indecies for faster queries
     index_q = """
         create index if not exists idx_islands_geom
         on islands
@@ -98,10 +92,8 @@ def identify_islands(ls_network):
         using btree (id, fn, tn, island);
         """
 
-    conn = ENGINE.connect()
-    conn.execute(q)
-    conn.execute(index_q)
-
+    db.execute(q)
+    db.execute(index_q)
 
 
 def main():
