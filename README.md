@@ -2,6 +2,9 @@
 
 New approach to LTS Network Connectivity
 
+Webmap for segment selection:
+[Link](https://mmorley0395.github.io/LTS_island_connectivity/)
+
 ## TODO
 
 :white_check_mark: import data scripts
@@ -12,8 +15,10 @@ New approach to LTS Network Connectivity
 
 :white_check_mark: grab census data (block level), parse percentage overlap
 
-:black_square_button: add line functionality (if needed, in pull_stat function)
+:white_check_mark: create web interface for selecting UIDs from lts segs, for sandbox use (testing) (needs refinement but works)
 
-:black_square_button: create web interface for selecting UIDs from lts segs, for sandbox use (testing), but with the ultimate goal as transforming it into the front end interface
+:black_square_button: add clear button to webmap
+
+:black_square_button: add line functionality (if needed, in pull_stat function)
 
 :black_square_button: (maybe) compare to other segments in study area? in muni? to be discussed
