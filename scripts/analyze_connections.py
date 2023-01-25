@@ -1,5 +1,4 @@
 from pg_data_etl import Database
-# input a collection of segments from the desired "gap" layer, i.e. your study area segment.
 db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
 
@@ -120,18 +119,14 @@ def pull_stat(column: str, table: str, geom_type: str):
     geom_type = geom_type.lower()
 
     if geom_type == "polygon":
-        gdf = db.gdf(
-            f"""select 
-                a.{column},
-                    b.*, 
-                    st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) as pct_overlap,
-                    round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * {column}) as {column}_in_blobs
-                from {table} a, blobs b 
-                where st_intersects(a.geom, b.geom)
-    """,
-            "geom",
-        )
-        sum_poly = round(gdf[f"{column}_in_blobs"].sum())
+        q = f"""
+            with total as(
+	            select round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * a.totpop2020) as {column}_in_blobs
+	            from {table} a, blobs b
+	            where st_intersects (a.geom, b.geom))
+            select sum({column}_in_blobs) from total
+    """
+        sum_poly = db.query_as_singleton(q) 
         return sum_poly
 
     if geom_type == "point":
