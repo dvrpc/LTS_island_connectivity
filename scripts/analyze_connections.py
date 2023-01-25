@@ -1,7 +1,9 @@
-import geopandas as gpd
-from env_vars import db, gis_db
-
+from pg_data_etl import Database
 # input a collection of segments from the desired "gap" layer, i.e. your study area segment.
+db = Database.from_config("lts", "localhost")
+gis_db = Database.from_config("gis", "gis")
+
+
 dvrpc_ids = (
     578711,
     578712,
@@ -91,20 +93,17 @@ def generate_proximate_blobs(islands_table):
     islands_table is the table that includes the islands you want to look at (e.g. lts_1_2_islands for islands that include lts 1 and 2)
 
     """
-    db.execute("drop table if exists blobs")
-    gdf = db.gdf(
-        f"""select st_concavehull(a.geom, .8) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
+    db.execute(
+        f"""drop table if exists blobs;
+            create table blobs as
+            select st_concavehull(a.geom, .8) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
                 from data_viz.{islands_table} a 
                 inner join study_segment b
                 on st_intersects(a.geom,b.geom)
                 where geometrytype(st_convexhull(a.geom)) = 'POLYGON'""",
-        geom_col="geom",
     )
-    db.import_geodataframe(
-        gdf, "blobs", gpd_kwargs={"if_exists": "replace"}, explode=True
-    )
-    mileage = gdf["size_miles"].sum()
-    return round(mileage)
+    mileage_q = """select sum(size_miles) from blobs"""
+    return db.query_as_singleton(mileage_q) 
 
 
 def pull_stat(column: str, table: str, geom_type: str):
