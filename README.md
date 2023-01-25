@@ -3,7 +3,7 @@
 New approach to LTS Network Connectivity
 
 Webmap for segment selection:
-[Link](https://mmorley0395.github.io/LTS_island_connectivity/)
+[Link](https://dvrpc.github.io/LTS_island_connectivity/)
 
 ## TODO
 
