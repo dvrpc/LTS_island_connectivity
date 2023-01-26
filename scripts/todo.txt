@@ -1,2 +1,3 @@
 -add in other data and write queries for each piece
 -update scripts to pull data from GISDB on the fly rather than copying and importing it
+  - do so with foreign data wrappers. need to meet/chat with mike and kris about making sure the servier is/will be whitelisted
