@@ -1,2 +1,3 @@
 -refactor to remove geopandas: this is going to be a front end pulling from a db, let the db do the work, not gpd.
 -add in other data and write queries for each piece
+-update scripts to pull data from GISDB on the fly rather than copying and importing it
