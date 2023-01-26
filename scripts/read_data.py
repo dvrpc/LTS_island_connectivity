@@ -7,8 +7,7 @@ and inserts it into a Postgres database.
 Requires geo-enabled postgres database (CREATE EXTENSION postgis;)
 """
 
-import geopandas as gpd
-# from env_vars import ENGINE, GIS_ENGINE, db, gis_db
+import os
 from pg_data_etl import Database
 db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
@@ -20,11 +19,7 @@ def import_data(
     explode=True,
 ):
     print(f"initiating import of {full_layer_tablename}, please wait...")
-    gdf = gis_db.gdf(sql_query, geom_col)
-    gdf = gdf.to_crs(26918)
-    db.import_geodataframe(
-        gdf, full_layer_tablename, explode=explode, gpd_kwargs={"if_exists": "replace"}
-    )
+    os.system(f"""ogr2ogr -sql "{sql_query}" -explodecollections -f "PostgreSQL" PG:"host={db.connection_params['host']} user={db.connection_params['un']} dbname={db.connection_params['db_name']} password={db.connection_params['pw']}" -t_srs "EPSG:26918" -f "PostgreSQL" PG:"host={gis_db.connection_params['host']} port={gis_db.connection_params['port']} dbname={gis_db.connection_params['db_name']} user={gis_db.connection_params['un']} password={gis_db.connection_params['pw']}" -nln {full_layer_tablename}""")
 
 
 def make_low_stress_lts(lts_level:int=3):
