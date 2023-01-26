@@ -8,8 +8,10 @@ Requires geo-enabled postgres database (CREATE EXTENSION postgis;)
 """
 
 import geopandas as gpd
-from env_vars import ENGINE, GIS_ENGINE, db, gis_db
-
+# from env_vars import ENGINE, GIS_ENGINE, db, gis_db
+from pg_data_etl import Database
+db = Database.from_config("lts", "localhost")
+gis_db = Database.from_config("gis", "gis")
 
 def import_data(
     sql_query=str,
@@ -25,16 +27,14 @@ def import_data(
     )
 
 
-def make_low_stress_lts(lts_level=3):
+def make_low_stress_lts(lts_level:int=3):
     """Make a low stress network based on a certain threshold. Returns LTS network with
     all segments below specified lts_level (i.e. if write 'lts_level=3', it will create select LTS 1 and 2 as a new table.)"""
-    gdf = db.gdf(
-        f"select * from lts_full where lts_score::int < {lts_level}",
-        geom_col="geom",
-    )
-    gdf = gdf.drop(columns=["level_0"])
-    db.import_geodataframe(
-        gdf, f"lts_stress_below_{lts_level}", gpd_kwargs={"if_exists": "replace"}
+    db.execute(
+        f"""
+        drop table if exists lts_stress_below_{lts_level};
+        create table lts_stress_below_{lts_level} as(
+        select * from lts_full where lts_score::int < {lts_level})"""
     )
 
 

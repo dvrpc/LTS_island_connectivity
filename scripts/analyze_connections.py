@@ -102,16 +102,17 @@ def generate_proximate_blobs(islands_table):
                 where geometrytype(st_convexhull(a.geom)) = 'POLYGON'""",
     )
     mileage_q = """select sum(size_miles) from blobs"""
-    return db.query_as_singleton(mileage_q) 
+    return round(db.query_as_singleton(mileage_q))
 
 
-def pull_stat(column: str, table: str, geom_type: str):
+def pull_stat(column: str, table: str, geom_type: str, schema:str='public'):
     """
     grabs the identified attribute (population, school, etc) within the study area blobs.\
     
     :param str column: the column you want to pull data from in your database
     :param str table: the table you want to pull data from in your database
     :param str geom_type: the type (point, line, or polygon) of your data
+    :param str schema: the postgres schema of your db
 
     todo: 
     add line type handler
@@ -121,13 +122,13 @@ def pull_stat(column: str, table: str, geom_type: str):
     if geom_type == "polygon":
         q = f"""
             with total as(
-	            select round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * a.totpop2020) as {column}_in_blobs
-	            from {table} a, blobs b
+	            select round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * a.{column}) as {column}_in_blobs
+	            from {table} {schema}.a, blobs b
 	            where st_intersects (a.geom, b.geom))
-            select sum({column}_in_blobs) from total
+            select round(sum({column}_in_blobs)) from total
     """
-        sum_poly = db.query_as_singleton(q) 
-        return sum_poly
+        sum_poly = gis_db.query_as_singleton(q) 
+        return round(sum_poly)
 
     if geom_type == "point":
         df = db.df(
