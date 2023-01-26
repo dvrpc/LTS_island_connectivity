@@ -123,11 +123,11 @@ def pull_stat(column: str, table: str, geom_type: str, schema:str='public'):
         q = f"""
             with total as(
 	            select round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * a.{column}) as {column}_in_blobs
-	            from {table} {schema}.a, blobs b
+	            from {table} a, blobs b
 	            where st_intersects (a.geom, b.geom))
             select round(sum({column}_in_blobs)) from total
     """
-        sum_poly = gis_db.query_as_singleton(q) 
+        sum_poly = db.query_as_singleton(q) 
         return round(sum_poly)
 
     if geom_type == "point":
