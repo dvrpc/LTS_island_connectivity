@@ -1,4 +1,5 @@
 from pg_data_etl import Database
+
 db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
 
@@ -105,7 +106,7 @@ def generate_proximate_blobs(islands_table):
     return round(db.query_as_singleton(mileage_q))
 
 
-def pull_stat(column: str, table: str, geom_type: str, schema:str='public'):
+def pull_stat(column: str, table: str, geom_type: str, schema: str = "public"):
     """
     grabs the identified attribute (population, school, etc) within the study area blobs.\
     
@@ -127,7 +128,7 @@ def pull_stat(column: str, table: str, geom_type: str, schema:str='public'):
 	            where st_intersects (a.geom, b.geom))
             select round(sum({column}_in_blobs)) from total
     """
-        sum_poly = db.query_as_singleton(q) 
+        sum_poly = db.query_as_singleton(q)
         return round(sum_poly)
 
     if geom_type == "point":

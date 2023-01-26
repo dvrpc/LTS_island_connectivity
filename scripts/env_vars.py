@@ -17,4 +17,4 @@ DATA_ROOT = os.getenv("data_root")
 # if using PG ETL library
 db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
-data_folder = Path(os.getenv("data_root")) 
+data_folder = Path(os.getenv("data_root"))
