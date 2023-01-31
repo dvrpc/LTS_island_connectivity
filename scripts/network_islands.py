@@ -1,6 +1,9 @@
 import geopandas as gpd
-from env_vars import db, gis_db
 from network_routing.gaps.segments.generate_islands import generate_islands
+from pg_data_etl import Database
+db = Database.from_config("lts", "localhost")
+gis_db = Database.from_config("gis", "gis")
+
 
 generate_islands(db, "ped_network", "sw")
 generate_islands(db, "lts_stress_below_2", "lts_1_")
