@@ -15,10 +15,8 @@ gis_db = Database.from_config("gis", "gis")
 
 
 def import_data(
-    sql_query=str,
-    geom_col=str,
-    full_layer_tablename=str,
-    explode=True,
+    sql_query: str,
+    full_layer_tablename: str,
 ):
     print(f"initiating import of {full_layer_tablename}, please wait...")
     os.system(
@@ -33,47 +31,42 @@ def make_low_stress_lts(lts_level: int = 3):
         f"""
         drop table if exists lts_stress_below_{lts_level};
         create table lts_stress_below_{lts_level} as(
-        select * from lts_full where lts_score::int < {lts_level})"""
+        select * from lts_full where lts_score::int < {lts_level})
+        """
     )
 
 
 if __name__ == "__main__":
     import_data(
         "select *, gid as dvrpc_id from transportation.lts_network where typeno != '22' and typeno != '82'",
-        "shape",
-        full_layer_tablename="lts_full",
+        "lts_full",
     )
     import_data(
         "select * from demographics.ipd_2020",
-        "shape",
-        full_layer_tablename="ipd_2020",
+        "ipd_2020",
     )
     import_data(
         """select * from demographics.deccen_2020_block db
             inner join demographics.census_blocks_2020 cb
-            on cb.geoid = db.geocode""",
-        "shape",
-        full_layer_tablename="censusblock2020_demographics",
+            on cb.geoid = db.geocode
+            """,
+        "censusblock2020_demographics",
     )
     import_data(
         "select * from transportation.pedestriannetwork_lines",
-        "shape",
-        full_layer_tablename="ped_network",
+        "ped_network",
     )
     import_data(
         "select * from boundaries.municipalboundaries",
-        "shape",
-        full_layer_tablename="municipalboundaries",
+        "municipalboundaries",
     )
     import_data(
         "select * from planning.eta_essentialservicespts",
-        "shape",
-        full_layer_tablename="essential_services",
+        "essential_services",
     )
     import_data(
         "select * from transportation.circuittrails",
-        "shape",
-        full_layer_tablename="circuittrails",
+        "circuittrails",
     )
 
     make_low_stress_lts(4)
