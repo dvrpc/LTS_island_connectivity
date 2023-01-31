@@ -70,6 +70,9 @@ if __name__ == "__main__":
         "shape",
         full_layer_tablename="essential_services",
     )
+    import_data(
+        "select * from transportation.circuittrails", "shape", full_layer_tablename="circuittrails"
+    )
 
     make_low_stress_lts(4)
     make_low_stress_lts(3)
