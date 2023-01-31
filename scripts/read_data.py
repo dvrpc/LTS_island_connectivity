@@ -22,7 +22,7 @@ def import_data(
 ):
     print(f"initiating import of {full_layer_tablename}, please wait...")
     os.system(
-        f"""ogr2ogr -sql "{sql_query}" -explodecollections -f "PostgreSQL" PG:"host={db.connection_params['host']} user={db.connection_params['un']} dbname={db.connection_params['db_name']} password={db.connection_params['pw']}" -t_srs "EPSG:26918" -f "PostgreSQL" PG:"host={gis_db.connection_params['host']} port={gis_db.connection_params['port']} dbname={gis_db.connection_params['db_name']} user={gis_db.connection_params['un']} password={gis_db.connection_params['pw']}" -nln {full_layer_tablename}"""
+        f"""ogr2ogr -lco GEOMETRY_NAME=geom -sql "{sql_query}" -explodecollections -f "PostgreSQL" -overwrite PG:"host={db.connection_params['host']} user={db.connection_params['un']} dbname={db.connection_params['db_name']} password={db.connection_params['pw']}" -t_srs "EPSG:26918" -f "PostgreSQL" PG:"host={gis_db.connection_params['host']} port={gis_db.connection_params['port']} dbname={gis_db.connection_params['db_name']} user={gis_db.connection_params['un']} password={gis_db.connection_params['pw']}" -nln {full_layer_tablename}"""
     )
 
 
