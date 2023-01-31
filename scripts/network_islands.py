@@ -1,6 +1,7 @@
 import geopandas as gpd
 from network_routing.gaps.segments.generate_islands import generate_islands
 from pg_data_etl import Database
+
 db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
 

@@ -5,8 +5,19 @@ gis_db = Database.from_config("gis", "gis")
 
 
 dvrpc_ids = (
-        575564,575563,401470,401469,440968,440967,426544,426543,440966,440965,440964,440963
-        )
+    575564,
+    575563,
+    401470,
+    401469,
+    440968,
+    440967,
+    426544,
+    426543,
+    440966,
+    440965,
+    440964,
+    440963,
+)
 
 
 def create_study_segment(lts_gaps_table):
@@ -79,14 +90,16 @@ def pull_stat(column: str, table: str, geom_type: str, schema: str = "public"):
         return df_dict
 
     if geom_type == "line":
-        df =  db.df(
-                f"""
+        df = db.df(
+            f"""
                 select a.{column}, st_length(a.geom)/1609 as miles from circuittrails a, blobs b
                     where st_intersects(a.geom, b.geom)
                     group by a.circuit, st_length(a.geom) 
-                """)
+                """
+        )
         df_dict = df.to_dict("records")
-        return df_dict 
+        return df_dict
+
 
 if __name__ == "__main__":
     create_study_segment("lts2gaps")
