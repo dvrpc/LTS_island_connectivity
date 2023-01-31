@@ -5,69 +5,8 @@ gis_db = Database.from_config("gis", "gis")
 
 
 dvrpc_ids = (
-    578711,
-    578712,
-    408624,
-    408623,
-    449502,
-    449501,
-    449506,
-    449505,
-    449503,
-    449504,
-    449511,
-    449512,
-    449510,
-    449509,
-    449508,
-    449507,
-    399718,
-    399717,
-    399763,
-    399764,
-    399730,
-    399729,
-    399671,
-    399672,
-    449514,
-    449513,
-    402969,
-    402970,
-    399782,
-    399781,
-    399740,
-    399739,
-    402968,
-    402967,
-    399722,
-    399721,
-    399773,
-    399774,
-    449516,
-    449515,
-    449518,
-    449517,
-    421871,
-    421872,
-    449522,
-    449521,
-    449520,
-    449519,
-    405807,
-    405808,
-    418490,
-    418489,
-    449526,
-    449525,
-    402964,
-    402963,
-    410816,
-    410815,
-    449523,
-    449524,
-    405806,
-    405805,
-)
+        575564,575563,401470,401469,440968,440967,426544,426543,440966,440965,440964,440963
+        )
 
 
 def create_study_segment(lts_gaps_table):
@@ -115,8 +54,6 @@ def pull_stat(column: str, table: str, geom_type: str, schema: str = "public"):
     :param str geom_type: the type (point, line, or polygon) of your data
     :param str schema: the postgres schema of your db
 
-    todo: 
-    add line type handler
     """
     geom_type = geom_type.lower()
 
@@ -141,9 +78,19 @@ def pull_stat(column: str, table: str, geom_type: str, schema: str = "public"):
         df_dict = df.to_dict("records")
         return df_dict
 
+    if geom_type == "line":
+        df =  db.df(
+                f"""
+                select a.{column}, st_length(a.geom)/1609 as miles from circuittrails a, blobs b
+                    where st_intersects(a.geom, b.geom)
+                    group by a.circuit, st_length(a.geom) 
+                """)
+        df_dict = df.to_dict("records")
+        return df_dict 
 
 if __name__ == "__main__":
     create_study_segment("lts2gaps")
     print(generate_proximate_blobs("lts_1_2_islands"))
     print(pull_stat("type", "essential_services", "point"))
     print(pull_stat("totpop2020", "censusblock2020_demographics", "polygon"))
+    print(pull_stat("circuit", "circuittrails", "line"))
