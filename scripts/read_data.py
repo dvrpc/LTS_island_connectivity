@@ -18,7 +18,8 @@ def import_data():
     creates a foreign data wrapper, allowing the db to query to make queries from the dvrpc postgres db rather than making a mini-etl pipeline to pull copies in.
     """
 
-    db.execute(f"""
+    db.execute(
+        f"""
 
     DROP SCHEMA fdw_gis CASCADE;
 
@@ -40,7 +41,8 @@ def import_data():
     IMPORT FOREIGN SCHEMA demographics limit to (ipd_2020, deccen_2020_block, census_blocks_2020) from server gis_bridge into fdw_gis;
     CREATE OR REPLACE VIEW fdw_gis.lts_full as (select *, gid as dvrpc_id from fdw_gis.lts_network where typeno != '22' and typeno != '82');
     CREATE OR REPLACE VIEW fdw_gis.censusblock2020_demographics as (select db.*, cb.geoid, cb.shape from fdw_gis.deccen_2020_block db inner join fdw_gis.census_blocks_2020 cb on cb.geoid = db.geocode); 
-    """)
+    """
+    )
 
 
 def make_low_stress_lts(lts_level: int = 3):
@@ -56,7 +58,7 @@ def make_low_stress_lts(lts_level: int = 3):
 
 
 if __name__ == "__main__":
-    
+
     import_data()
     make_low_stress_lts(4)
     make_low_stress_lts(3)
