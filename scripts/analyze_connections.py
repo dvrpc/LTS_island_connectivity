@@ -71,9 +71,9 @@ def pull_stat(column: str, table: str, geom_type: str, schema: str = "public"):
     if geom_type == "polygon":
         q = f"""
             with total as(
-	            select round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * a.{column}) as {column}_in_blobs
+	            select round(st_area(st_intersection(a.shape, b.geom)) / st_area(a.shape) * a.{column}) as {column}_in_blobs
 	            from {table} a, blobs b
-	            where st_intersects (a.geom, b.geom))
+	            where st_intersects (a.shape, b.geom))
             select round(sum({column}_in_blobs)) from total
     """
         sum_poly = db.query_as_singleton(q)
@@ -82,7 +82,7 @@ def pull_stat(column: str, table: str, geom_type: str, schema: str = "public"):
     if geom_type == "point":
         df = db.df(
             f"""select count(a.{column}), a.{column} from {table} a, blobs b
-                where st_intersects(a.geom, b.geom)
+                where st_intersects(a.shape, b.geom)
                 group by a.{column}"""
         )
         # zips up dataframe containing count by column attribute of point
@@ -92,9 +92,9 @@ def pull_stat(column: str, table: str, geom_type: str, schema: str = "public"):
     if geom_type == "line":
         df = db.df(
             f"""
-                select a.{column}, st_length(a.geom)/1609 as miles from circuittrails a, blobs b
-                    where st_intersects(a.geom, b.geom)
-                    group by a.circuit, st_length(a.geom) 
+                select a.{column}, st_length(a.shape)/1609 as miles from {table} a, blobs b
+                    where st_intersects(a.shape, b.geom)
+                    group by a.{column}, st_length(a.shape) 
                 """
         )
         df_dict = df.to_dict("records")
@@ -104,6 +104,6 @@ def pull_stat(column: str, table: str, geom_type: str, schema: str = "public"):
 if __name__ == "__main__":
     create_study_segment("lts2gaps")
     print(generate_proximate_blobs("lts_1_2_islands"))
-    print(pull_stat("type", "essential_services", "point"))
-    print(pull_stat("totpop2020", "censusblock2020_demographics", "polygon"))
-    print(pull_stat("circuit", "circuittrails", "line"))
+    print(pull_stat("type", "fdw_gis.eta_essentialservicespts", "point"))
+    print(pull_stat("totpop2020", "fdw_gis.censusblock2020_demographics", "polygon"))
+    print(pull_stat("circuit", "fdw_gis.circuittrails", "line"))
