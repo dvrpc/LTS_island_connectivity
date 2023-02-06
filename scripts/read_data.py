@@ -7,21 +7,40 @@ and inserts it into a Postgres database.
 Requires geo-enabled postgres database (CREATE EXTENSION postgis;)
 """
 
-import os
 from pg_data_etl import Database
 
 db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
 
 
-def import_data(
-    sql_query: str,
-    full_layer_tablename: str,
-):
-    print(f"initiating import of {full_layer_tablename}, please wait...")
-    os.system(
-        f"""ogr2ogr -lco GEOMETRY_NAME=geom -sql "{sql_query}" -explodecollections -f "PostgreSQL" -overwrite PG:"host={db.connection_params['host']} user={db.connection_params['un']} dbname={db.connection_params['db_name']} password={db.connection_params['pw']}" -t_srs "EPSG:26918" -f "PostgreSQL" PG:"host={gis_db.connection_params['host']} port={gis_db.connection_params['port']} dbname={gis_db.connection_params['db_name']} user={gis_db.connection_params['un']} password={gis_db.connection_params['pw']}" -nln {full_layer_tablename}"""
-    )
+def import_data():
+    """
+    creates a foreign data wrapper, allowing the db to query to make queries from the dvrpc postgres db rather than making a mini-etl pipeline to pull copies in.
+    """
+
+    db.execute(f"""
+
+    DROP SCHEMA fdw_gis CASCADE;
+
+    CREATE SCHEMA if not exists fdw_gis;
+
+    CREATE EXTENSION if not exists postgres_fdw SCHEMA fdw_gis;
+
+    CREATE SERVER if not exists gis_bridge
+        FOREIGN DATA WRAPPER postgres_fdw
+        OPTIONS (host '{gis_db.connection_params['host']}', dbname '{gis_db.connection_params['db_name']}', port '{gis_db.connection_params['port']}');
+        
+    CREATE USER MAPPING if not exists FOR postgres
+        SERVER gis_bridge
+        OPTIONS (user '{gis_db.connection_params['un']}', password '{gis_db.connection_params['pw']}');
+
+    IMPORT FOREIGN SCHEMA transportation limit to (circuittrails, pedestriannetwork_lines, lts_network ) from server gis_bridge into fdw_gis;
+    IMPORT FOREIGN SCHEMA boundaries limit to (municipalboundaries) from server gis_bridge into fdw_gis;
+    IMPORT FOREIGN SCHEMA planning limit to (eta_essentialservicespts) from server gis_bridge into fdw_gis;
+    IMPORT FOREIGN SCHEMA demographics limit to (ipd_2020, deccen_2020_block, census_blocks_2020) from server gis_bridge into fdw_gis;
+    CREATE OR REPLACE VIEW fdw_gis.lts_full as (select *, gid as dvrpc_id from fdw_gis.lts_network where typeno != '22' and typeno != '82');
+    CREATE OR REPLACE VIEW fdw_gis.censusblock2020_demographics as (select db.*, cb.geoid, cb.shape from fdw_gis.deccen_2020_block db inner join fdw_gis.census_blocks_2020 cb on cb.geoid = db.geocode); 
+    """)
 
 
 def make_low_stress_lts(lts_level: int = 3):
@@ -37,38 +56,8 @@ def make_low_stress_lts(lts_level: int = 3):
 
 
 if __name__ == "__main__":
-    import_data(
-        "select *, gid as dvrpc_id from transportation.lts_network where typeno != '22' and typeno != '82'",
-        "lts_full",
-    )
-    import_data(
-        "select * from demographics.ipd_2020",
-        "ipd_2020",
-    )
-    import_data(
-        """select * from demographics.deccen_2020_block db
-            inner join demographics.census_blocks_2020 cb
-            on cb.geoid = db.geocode
-            """,
-        "censusblock2020_demographics",
-    )
-    import_data(
-        "select * from transportation.pedestriannetwork_lines",
-        "ped_network",
-    )
-    import_data(
-        "select * from boundaries.municipalboundaries",
-        "municipalboundaries",
-    )
-    import_data(
-        "select * from planning.eta_essentialservicespts",
-        "essential_services",
-    )
-    import_data(
-        "select * from transportation.circuittrails",
-        "circuittrails",
-    )
-
+    
+    import_data()
     make_low_stress_lts(4)
     make_low_stress_lts(3)
     make_low_stress_lts(2)
