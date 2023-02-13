@@ -41,7 +41,7 @@ def import_data():
     IMPORT FOREIGN SCHEMA demographics limit to (ipd_2020, deccen_2020_block, census_blocks_2020) from server gis_bridge into fdw_gis;
     CREATE OR REPLACE VIEW fdw_gis.lts_full as (select *, gid as dvrpc_id from fdw_gis.lts_network where typeno != '22' and typeno != '82');
     CREATE OR REPLACE VIEW fdw_gis.censusblock2020_demographics as (select db.*, cb.geoid, cb.shape from fdw_gis.deccen_2020_block db inner join fdw_gis.census_blocks_2020 cb on cb.geoid = db.geocode); 
-    CREATE OR REPLACE VIEW fdw_gis.bikepedcrashes as ( select a.shape, count(*) filter (where isbycyclist = 'Y') as bike, count(*) filter (where isbycyclist is null) as ped from fdw_gis.crash_newjersey a inner join fdw_gis.crash_nj_pedestrians b on a.casenumber = b.casenumber group by a.shape);
+    CREATE OR REPLACE VIEW fdw_gis.bikepedcrashes as (select st_transform(a.shape,26918) as shape, count(*) filter (where isbycyclist = 'Y') as bike, count(*) filter (where isbycyclist is null) as ped from fdw_gis.crash_newjersey a inner join fdw_gis.crash_nj_pedestrians b on a.casenumber = b.casenumber group by a.shape, a.casenumber);
     """
     )
 
