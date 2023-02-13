@@ -15,10 +15,10 @@ Webmap for segment selection:
 
 :white_check_mark: grab census data (block level), parse percentage overlap
 
-:white_check_mark: create web interface for selecting UIDs from lts segs, for sandbox use (testing) (needs refinement but works)
-
 :black_square_button: add clear button to webmap
 
-:black_square_button: add line functionality (if needed, in pull_stat function)
+:black_square_button: make API , hook to webmap
 
-:black_square_button: (maybe) compare to other segments in study area? in muni? to be discussed
+:black_square_button: update how crashes are pulled (setup PA/NJ)
+
+:black_square_button: change census to planbelt-census tool rather than pulling decenial from pg
