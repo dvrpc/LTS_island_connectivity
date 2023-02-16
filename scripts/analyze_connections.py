@@ -29,7 +29,7 @@ def create_study_segment(lts_gaps_table):
 def buffer_study_segment(distance:int=30):
     """Creates a buffer around the study segment. Default for distance is 30m (100 ft) assuming your data is using meteres"""
     
-    db.execute(f"""drop table if exists study_segment_buffer;
+    db.execute(f"""drop table if exists study_segment_buffer CASCADE;
                 create table study_segment_buffer as
                     select st_buffer(geom, {distance}) as geom from study_segment
                     """)
