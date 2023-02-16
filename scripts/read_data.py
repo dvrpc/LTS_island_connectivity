@@ -11,6 +11,7 @@ from pg_data_etl import Database
 
 db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
+from planbelt.plan_belt.census import census_pull
 
 
 def import_data():
@@ -44,6 +45,21 @@ def import_data():
     CREATE OR REPLACE VIEW fdw_gis.bikepedcrashes as (select st_transform(a.shape,26918) as shape, count(*) filter (where isbycyclist = 'Y') as bike, count(*) filter (where isbycyclist is null) as ped from fdw_gis.crash_newjersey a inner join fdw_gis.crash_nj_pedestrians b on a.casenumber = b.casenumber group by a.shape, a.casenumber);
     """
     )
+
+def import_census()
+    
+    """Function to grab census data needed for analysis""" 
+    
+    census_tables = {
+        "B01001_001E": "total",
+        "B08014_002E": "zero_car",
+        "S1810_C02_001E": "disabled",
+        "B09001_001E": "youth",
+        "S0101_C01_030E": "older_adults",
+        "S1701_C01_042E": "low_income",
+        "B02001_002E": "racial_minority",
+        "B03002_012E": "ethnic_minority",
+    }
 
 
 def make_low_stress_lts(lts_level: int = 3):
