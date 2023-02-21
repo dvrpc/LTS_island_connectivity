@@ -46,22 +46,6 @@ def import_data():
     """
     )
 
-def import_census()
-    
-    """Function to grab census data needed for analysis""" 
-    
-    census_tables = {
-        "B01001_001E": "total",
-        "B08014_002E": "zero_car",
-        "S1810_C02_001E": "disabled",
-        "B09001_001E": "youth",
-        "S0101_C01_030E": "older_adults",
-        "S1701_C01_042E": "low_income",
-        "B02001_002E": "racial_minority",
-        "B03002_012E": "ethnic_minority",
-    }
-
-
 def make_low_stress_lts(lts_level: int = 3):
     """Make a low stress network based on a certain threshold. Returns LTS network with
     all segments below specified lts_level (i.e. if write 'lts_level=3', it will create select LTS 1 and 2 as a new table.)"""
