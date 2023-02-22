@@ -75,6 +75,9 @@ class StudySegment:
             "point",
             "fdw_gis.proximate_lu_and_touching",
         )
+        self.rail_stations = self.pull_stat(
+            "type", "fdw_gis.passengerrailstations", "point"
+        )
 
     def __create_study_segment(self):
 
@@ -210,4 +213,6 @@ class StudySegment:
 
 a = StudySegment(dvrpc_ids)
 attrs = vars(a)
-print(attrs)
+
+for i in attrs:
+    print(i, attrs[i])

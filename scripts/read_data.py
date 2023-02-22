@@ -35,7 +35,7 @@ def import_data():
         SERVER gis_bridge
         OPTIONS (user '{gis_db.connection_params['un']}', password '{gis_db.connection_params['pw']}');
 
-    IMPORT FOREIGN SCHEMA transportation limit to (circuittrails, pedestriannetwork_lines, lts_network, crash_newjersey, crash_nj_pedestrians ) from server gis_bridge into fdw_gis;
+    IMPORT FOREIGN SCHEMA transportation limit to (circuittrails, pedestriannetwork_lines, lts_network, crash_newjersey, crash_nj_pedestrians, passengerrailstations) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA boundaries limit to (municipalboundaries) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA planning limit to (eta_essentialservicespts, dvrpc_landuse_2015) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA demographics limit to (ipd_2020, deccen_2020_block, census_blocks_2020) from server gis_bridge into fdw_gis;
