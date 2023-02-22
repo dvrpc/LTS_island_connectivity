@@ -52,6 +52,27 @@ def generate_proximate_blobs(islands_table):
     mileage_q = """select sum(size_miles) from blobs"""
     return round(db.query_as_singleton(mileage_q))
 
+def handle_parking_lots():
+    """Grabs proximate parking lots and their associated land uses, returns all.
+
+    This helps avoid undercounting where essential services might not be on an island, but accessible from the segment via the parking lot."""
+    db.execute("""
+    create or replace view fdw_gis.proximate_lu as 
+        select a.geom from fdw_gis.landuse_selection a
+        inner join public.study_segment_buffer b
+        on st_intersects (a.geom, b.geom);
+    create or replace view fdw_gis.proximate_lu_and_touching as
+        select st_union(a.geom) as geom 
+            from fdw_gis.proximate_lu a
+            inner join fdw_gis.landuse_selection b 
+            on st_touches(a.geom, b.geom)
+        where b.lu15subn like 'Parking%'
+            or b.lu15subn like 'Institutional%'
+            or b.lu15subn like 'Commercial%'
+            or b.lu15subn = 'Recreation: General'
+            or b.lu15subn = 'Transportation: Rail Right-of-Way'
+            or b.lu15subn = 'Transportation: Facility'
+    """)
 
 def pull_stat(column: str, table: str, geom_type: str, polygon:str="blobs"):
     """
@@ -110,8 +131,10 @@ def pull_geometry(input_table:str, export_table:str, overlap_table:str, columns:
 if __name__ == "__main__":
     create_study_segment("lts2gaps")
     buffer_study_segment()
+    handle_parking_lots()
     print(generate_proximate_blobs("lts_1_2_islands"))
     print(pull_stat("type", "fdw_gis.eta_essentialservicespts", "point"))
+    print(pull_stat("type", "fdw_gis.eta_essentialservicespts", "point", "fdw_gis.proximate_lu_and_touching"))
     print(pull_stat("totpop2020", "fdw_gis.censusblock2020_demographics", "polygon"))
     print(pull_stat("hislat2020", "fdw_gis.censusblock2020_demographics", "polygon"))
     print(pull_stat("nonwhite", "fdw_gis.censusblock2020_demographics", "polygon"))

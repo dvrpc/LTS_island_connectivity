@@ -51,7 +51,8 @@ def import_data():
     CREATE MATERIALIZED VIEW fdw_gis.landuse_selection as (
         select lu15subn, st_force2d(shape) as geom from fdw_gis.dvrpc_landuse_2015 
         where lu15subn 
-        like 'Parking%' or lu15subn = 'Recreation: General' 
+        like 'Parking%' 
+        or lu15subn = 'Recreation: General' 
         or lu15subn = 'Transportation: Rail Right-of-Way' 
         or lu15subn like 'Commercial%'
         or lu15subn like 'Institutional%'
