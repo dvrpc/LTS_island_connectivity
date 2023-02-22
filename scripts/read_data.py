@@ -61,6 +61,7 @@ def import_data():
     """
     )
 
+
 def make_low_stress_lts(lts_level: int = 3):
     """Make a low stress network based on a certain threshold. Returns LTS network with
     all segments below specified lts_level (i.e. if write 'lts_level=3', it will create select LTS 1 and 2 as a new table.)"""
