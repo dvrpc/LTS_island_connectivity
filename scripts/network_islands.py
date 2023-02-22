@@ -1,4 +1,3 @@
-import geopandas as gpd
 from network_routing.gaps.segments.generate_islands import generate_islands
 from pg_data_etl import Database
 
@@ -7,9 +6,9 @@ gis_db = Database.from_config("gis", "gis")
 
 
 generate_islands(db, "ped_network", "sw")
-generate_islands(db, "lts_stress_below_2", "lts_1_")
-generate_islands(db, "lts_stress_below_3", "lts_1_2_")
-generate_islands(db, "lts_stress_below_4", "lts_1_2_3_")
+generate_islands(db, "lts_stress_below_2", "lts_1") # generates islands composed of lts 2, 3, and 4 segments
+generate_islands(db, "lts_stress_below_3", "lts_2") # generates islands composed of lts 3, 4 segments
+generate_islands(db, "lts_stress_below_4", "lts_3") # generates islands only of lts 4 segments 
 
 # table cleanup, gets rid of interim tables
 stresslist = [2, 3, 4]
