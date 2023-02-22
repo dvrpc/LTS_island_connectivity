@@ -37,16 +37,26 @@ def import_data():
 
     IMPORT FOREIGN SCHEMA transportation limit to (circuittrails, pedestriannetwork_lines, lts_network, crash_newjersey, crash_nj_pedestrians ) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA boundaries limit to (municipalboundaries) from server gis_bridge into fdw_gis;
-    IMPORT FOREIGN SCHEMA planning limit to (eta_essentialservicespts) from server gis_bridge into fdw_gis;
+    IMPORT FOREIGN SCHEMA planning limit to (eta_essentialservicespts, dvrpc_landuse_2015) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA demographics limit to (ipd_2020, deccen_2020_block, census_blocks_2020) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA economy limit to (nets_2015) from server gis_bridge into fdw_gis; 
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.censusblock2020_demographics CASCADE;
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.bikepedcrashes CASCADE;
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.nets CASCADE;
+    DROP MATERIALIZED VIEW IF EXISTS fdw_gis.landuse_selection CASCADE;
     CREATE OR REPLACE VIEW  fdw_gis.lts_full as (select *, gid as dvrpc_id from fdw_gis.lts_network where typeno != '22' and typeno != '82');
     CREATE MATERIALIZED VIEW fdw_gis.nets as (select * from fdw_gis.nets_2015);
     CREATE MATERIALIZED VIEW fdw_gis.censusblock2020_demographics as (select db.*, (db.totpop2020 - db.whitenh2020) as nonwhite, cb.geoid, cb.shape from fdw_gis.deccen_2020_block db inner join fdw_gis.census_blocks_2020 cb on cb.geoid = db.geocode); 
     CREATE MATERIALIZED VIEW  fdw_gis.bikepedcrashes as (select st_transform(a.shape,26918) as shape, count(*) filter (where isbycyclist = 'Y') as bike, count(*) filter (where isbycyclist is null) as ped from fdw_gis.crash_newjersey a inner join fdw_gis.crash_nj_pedestrians b on a.casenumber = b.casenumber group by a.shape, a.casenumber);
+    CREATE MATERIALIZED VIEW fdw_gis.landuse_selection as (
+        select lu15subn, st_force2d(shape) as geom from fdw_gis.dvrpc_landuse_2015 
+        where lu15subn 
+        like 'Parking%' or lu15subn = 'Recreation: General' 
+        or lu15subn = 'Transportation: Rail Right-of-Way' 
+        or lu15subn like 'Commercial%'
+        or lu15subn like 'Institutional%'
+    )
+
     """
     )
 
