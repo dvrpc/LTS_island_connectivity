@@ -6,9 +6,15 @@ gis_db = Database.from_config("gis", "gis")
 
 
 generate_islands(db, "ped_network", "sw")
-generate_islands(db, "lts_stress_below_2", "lts_1") # generates islands composed of lts 2, 3, and 4 segments
-generate_islands(db, "lts_stress_below_3", "lts_2") # generates islands composed of lts 3, 4 segments
-generate_islands(db, "lts_stress_below_4", "lts_3") # generates islands only of lts 4 segments 
+generate_islands(
+    db, "lts_stress_below_2", "lts_1"
+)  # generates islands composed of lts 2, 3, and 4 segments
+generate_islands(
+    db, "lts_stress_below_3", "lts_2"
+)  # generates islands composed of lts 3, 4 segments
+generate_islands(
+    db, "lts_stress_below_4", "lts_3"
+)  # generates islands only of lts 4 segments
 
 # table cleanup, gets rid of interim tables
 stresslist = [2, 3, 4]
