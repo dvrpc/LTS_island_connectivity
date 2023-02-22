@@ -22,3 +22,5 @@ Webmap for segment selection:
 :black_square_button: update how crashes are pulled (setup PA/NJ)
 
 :black_square_button: change census to planbelt-census tool rather than pulling decenial from pg
+
+optional/thought: convert analyze_connections to class , so each new study segment is an instantiated class and you can store different segment info 
