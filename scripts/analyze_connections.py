@@ -55,15 +55,15 @@ class StudySegment:
         self.circuit = self.pull_stat("circuit", "fdw_gis.circuittrails", "line")
         self.jobs = self.pull_stat("munname", "fdw_gis.nets", "point")
         self.bike_crashes = self.pull_stat(
-            "bike", "fdw_gis.bikepedcrashes", "point", "study_segment_buffer"
+            "bike", "fdw_gis.bikepedcrashes", "point", "data_viz.study_segment_buffer"
         )
         self.ped_crashes = self.pull_stat(
-            "ped", "fdw_gis.bikepedcrashes", "point", "study_segment_buffer"
+            "ped", "fdw_gis.bikepedcrashes", "point", "data_viz.study_segment_buffer"
         )
         self.crash_export = self.pull_geometry(
             "fdw_gis.bikepedcrashes",
             "bikepedcrashes",
-            "study_segment_buffer",
+            "data_viz.study_segment_buffer",
             "bike, ped",
         )
         self.essential_serves = self.pull_stat(
@@ -73,7 +73,7 @@ class StudySegment:
             "type",
             "fdw_gis.eta_essentialservicespts",
             "point",
-            "fdw_gis.proximate_lu_and_touching",
+            "data_viz.proximate_lu_and_touching",
         )
         self.rail_stations = self.pull_stat(
             "type", "fdw_gis.passengerrailstations", "point"
@@ -89,8 +89,8 @@ class StudySegment:
         """
 
         db.execute(
-            f"""drop table if exists study_segment;
-                create table study_segment as 
+            f"""drop table if exists data_viz.study_segment;
+                create table data_viz.study_segment as 
                     select st_collect(geom) as geom, avg(lts_score::int) 
                     from lts{self.highest_comfort_level}gaps where dvrpc_id in {self.segment_ids};
             """
@@ -101,9 +101,9 @@ class StudySegment:
         Creates a buffer around the study segment. Default for distance is 30m (100 ft) assuming your data is using meteres"""
 
         db.execute(
-            f"""drop table if exists study_segment_buffer CASCADE;
-                    create table study_segment_buffer as
-                        select st_buffer(geom, {distance}) as geom from study_segment
+            f"""drop table if exists data_viz.study_segment_buffer CASCADE;
+                    create table data_viz.study_segment_buffer as
+                        select st_buffer(geom, {distance}) as geom from data_viz.study_segment
                         """
         )
 
@@ -118,7 +118,7 @@ class StudySegment:
                 create table blobs as
                 select st_concavehull(a.geom, .8) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
                     from data_viz.lts_{self.highest_comfort_level}islands a 
-                    inner join study_segment b
+                    inner join data_viz.study_segment b
                     on st_intersects(a.geom,b.geom)
                     where geometrytype(st_convexhull(a.geom)) = 'POLYGON'""",
         )
@@ -133,13 +133,13 @@ class StudySegment:
         This helps avoid undercounting where essential services might not be on an island, but accessible from the segment via the parking lot."""
         db.execute(
             """
-        create or replace view fdw_gis.proximate_lu as 
+        create or replace view data_viz.proximate_lu as 
             select a.geom from fdw_gis.landuse_selection a
-            inner join public.study_segment_buffer b
+            inner join data_viz.study_segment_buffer b
             on st_intersects (a.geom, b.geom);
-        create or replace view fdw_gis.proximate_lu_and_touching as
+        create or replace view data_viz.proximate_lu_and_touching as
             select st_union(a.geom) as geom 
-                from fdw_gis.proximate_lu a
+                from data_viz.proximate_lu a
                 inner join fdw_gis.landuse_selection b 
                 on st_touches(a.geom, b.geom)
             where b.lu15subn like 'Parking%'
@@ -206,7 +206,7 @@ class StudySegment:
 
         """
         db.execute(
-            f"""create or replace view geo_export_{export_table} as select {columns}, shape from {input_table} a inner join {overlap_table} b on st_intersects(a.shape, b.geom)"""
+            f"""create or replace view data_viz.geo_export_{export_table} as select {columns}, shape from {input_table} a inner join {overlap_table} b on st_intersects(a.shape, b.geom)"""
         )
         print("geometry exported to views, ready to use")
 
