@@ -15,12 +15,12 @@ Webmap for segment selection:
 
 :white_check_mark: grab census data (block level), parse percentage overlap
 
+:white_check_mark: refactor to use classes
+
 :black_square_button: add clear button to webmap
 
 :black_square_button: make API , hook to webmap
 
 :black_square_button: update how crashes are pulled (setup PA/NJ)
 
-:black_square_button: change census to planbelt-census tool rather than pulling decenial from pg
 
-optional/thought: convert analyze_connections to class , so each new study segment is an instantiated class and you can store different segment info 
