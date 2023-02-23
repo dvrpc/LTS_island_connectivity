@@ -38,11 +38,11 @@ class StudySegment:
         self.segment_ids = segment_ids
         self.highest_comfort_level = highest_comfort_level
 
+        self.miles = self.__generate_proximate_blobs()
         self.__create_study_segment()
         self.__buffer_study_segment()
         self.__handle_parking_lots()
 
-        self.miles = self.__generate_proximate_blobs()
         self.total_pop = self.pull_stat(
             "totpop2020", "fdw_gis.censusblock2020_demographics", "polygon"
         )
@@ -53,7 +53,7 @@ class StudySegment:
             "hislat2020", "fdw_gis.censusblock2020_demographics", "polygon"
         )
         self.circuit = self.pull_stat("circuit", "fdw_gis.circuittrails", "line")
-        self.jobs = self.pull_stat("munname", "fdw_gis.nets", "point")
+        self.firms = self.pull_stat("munname", "fdw_gis.nets", "point")
         self.bike_crashes = self.pull_stat(
             "bike", "fdw_gis.bikepedcrashes", "point", "data_viz.study_segment_buffer"
         )
@@ -67,16 +67,16 @@ class StudySegment:
             "bike, ped",
         )
         self.essential_serves = self.pull_stat(
-            "type", "fdw_gis.eta_essentialservicespts", "point"
-        )
-        self.services_in_parking = self.pull_stat(
             "type",
             "fdw_gis.eta_essentialservicespts",
             "point",
-            "data_viz.proximate_lu_and_touching",
+            "data_viz.parkinglot_union_lts_islands",
         )
         self.rail_stations = self.pull_stat(
-            "type", "fdw_gis.passengerrailstations", "point"
+            "type",
+            "fdw_gis.passengerrailstations",
+            "point",
+            "data_viz.parkinglot_union_lts_islands",
         )
 
     def __create_study_segment(self):
@@ -114,13 +114,16 @@ class StudySegment:
 
         """
         db.execute(
-            f"""drop table if exists blobs;
+            f"""drop table if exists blobs CASCADE;
                 create table blobs as
                 select st_concavehull(a.geom, .8) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
                     from data_viz.lts_{self.highest_comfort_level}islands a 
                     inner join data_viz.study_segment b
                     on st_intersects(a.geom,b.geom)
-                    where geometrytype(st_convexhull(a.geom)) = 'POLYGON'""",
+                    where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
+                create or replace view data_viz.blobs_union as 
+                    select st_union(a.geom) as geom, sum(size_miles) from public.blobs a;
+                    """,
         )
         mileage_q = """select sum(size_miles) from blobs"""
         return round(db.query_as_singleton(mileage_q))
@@ -147,7 +150,9 @@ class StudySegment:
                 or b.lu15subn like 'Commercial%'
                 or b.lu15subn = 'Recreation: General'
                 or b.lu15subn = 'Transportation: Rail Right-of-Way'
-                or b.lu15subn = 'Transportation: Facility'
+                or b.lu15subn = 'Transportation: Facility';
+        create or replace view data_viz.parkinglot_union_lts_islands as
+            select st_union(a.geom, b.geom) as geom from data_viz.proximate_lu_and_touching a, data_viz.blobs_union b;
         """
         )
 
@@ -174,7 +179,7 @@ class StudySegment:
                 select round(sum({column}_in_blobs)) from total
         """
             sum_poly = db.query_as_singleton(q)
-            return round(sum_poly)
+            return int(round(sum_poly, -2))
 
         if geom_type == "point":
             df = db.df(
@@ -208,7 +213,7 @@ class StudySegment:
         db.execute(
             f"""create or replace view data_viz.geo_export_{export_table} as select {columns}, shape from {input_table} a inner join {overlap_table} b on st_intersects(a.shape, b.geom)"""
         )
-        print("geometry exported to views, ready to use")
+        return "geometry exported to views, ready to use"
 
 
 a = StudySegment(dvrpc_ids)
