@@ -5,6 +5,10 @@ New approach to LTS Network Connectivity
 Webmap for segment selection:
 [Link](https://dvrpc.github.io/LTS_island_connectivity/)
 
+## Depenedencies
+PostGIS
+pgRouting (for isochrone creation)
+
 ## TODO
 
 :white_check_mark: import data scripts
