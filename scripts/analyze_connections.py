@@ -5,30 +5,20 @@ gis_db = Database.from_config("gis", "gis")
 
 
 dvrpc_ids = (
-    485093,
-    485094,
-    485098,
-    485097,
-    485095,
-    485096,
-    485099,
-    485100,
-    514979,
-    514980,
-    485019,
-    485020,
-    474758,
-    474757,
-    485092,
-    485091,
-    474792,
-    474791,
-    474789,
-    474790,
-    485089,
-    485090,
-    514981,
-    514982,
+    450562,
+    450561,
+    450564,
+    450563,
+    450565,
+    450566,
+    450567,
+    450568,
+    450570,
+    450569,
+    450571,
+    450572,
+    450574,
+    450573,
 )
 
 
@@ -116,13 +106,13 @@ class StudySegment:
         db.execute(
             f"""drop table if exists blobs CASCADE;
                 create table blobs as
-                select st_concavehull(a.geom, .8) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
+                select st_concavehull(a.geom, .85) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
                     from data_viz.lts_{self.highest_comfort_level}islands a 
                     inner join data_viz.study_segment b
                     on st_intersects(a.geom,b.geom)
                     where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
                 create or replace view data_viz.blobs_union as 
-                    select st_union(a.geom) as geom, sum(size_miles) from public.blobs a;
+                    select 1 as uid, st_union(a.geom) as geom, sum(size_miles) from public.blobs a;
                     """,
         )
         mileage_q = """select sum(size_miles) from blobs"""
@@ -137,11 +127,11 @@ class StudySegment:
         db.execute(
             """
         create or replace view data_viz.proximate_lu as 
-            select a.geom from fdw_gis.landuse_selection a
-            inner join data_viz.study_segment_buffer b
-            on st_intersects (a.geom, b.geom);
+            select a.uid, a.geom from fdw_gis.landuse_selection a
+                inner join data_viz.study_segment_buffer b
+                on st_intersects (a.geom, b.geom);
         create or replace view data_viz.proximate_lu_and_touching as
-            select st_union(a.geom) as geom 
+            select 1 as uid, st_union(st_union(a.geom), st_union(b.geom)) as geom
                 from data_viz.proximate_lu a
                 inner join fdw_gis.landuse_selection b 
                 on st_touches(a.geom, b.geom)
@@ -152,7 +142,7 @@ class StudySegment:
                 or b.lu15subn = 'Transportation: Rail Right-of-Way'
                 or b.lu15subn = 'Transportation: Facility';
         create or replace view data_viz.parkinglot_union_lts_islands as
-            select st_union(a.geom, b.geom) as geom from data_viz.proximate_lu_and_touching a, data_viz.blobs_union b;
+            select 1 as uid, st_union(a.geom, b.geom) as geom from data_viz.proximate_lu_and_touching a, data_viz.blobs_union b;
         """
         )
 

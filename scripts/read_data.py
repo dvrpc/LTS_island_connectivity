@@ -49,7 +49,7 @@ def import_data():
     CREATE MATERIALIZED VIEW fdw_gis.censusblock2020_demographics as (select db.*, (db.totpop2020 - db.whitenh2020) as nonwhite, cb.geoid, cb.shape from fdw_gis.deccen_2020_block db inner join fdw_gis.census_blocks_2020 cb on cb.geoid = db.geocode); 
     CREATE MATERIALIZED VIEW  fdw_gis.bikepedcrashes as (select st_transform(a.shape,26918) as shape, count(*) filter (where isbycyclist = 'Y') as bike, count(*) filter (where isbycyclist is null) as ped from fdw_gis.crash_newjersey a inner join fdw_gis.crash_nj_pedestrians b on a.casenumber = b.casenumber group by a.shape, a.casenumber);
     CREATE MATERIALIZED VIEW fdw_gis.landuse_selection as (
-        select lu15subn, st_force2d(shape) as geom from fdw_gis.dvrpc_landuse_2015 
+        select objectid as uid, lu15subn, st_force2d(shape) as geom from fdw_gis.dvrpc_landuse_2015 
         where lu15subn 
         like 'Parking%' 
         or lu15subn = 'Recreation: General' 
