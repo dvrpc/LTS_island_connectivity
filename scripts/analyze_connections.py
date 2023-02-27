@@ -5,20 +5,62 @@ gis_db = Database.from_config("gis", "gis")
 
 
 dvrpc_ids = (
-    450562,
-    450561,
-    450564,
-    450563,
-    450565,
-    450566,
-    450567,
-    450568,
-    450570,
-    450569,
-    450571,
-    450572,
-    450574,
-    450573,
+    399763,
+    399764,
+    399730,
+    399729,
+    399671,
+    399672,
+    399718,
+    399717,
+    449511,
+    449512,
+    449510,
+    449509,
+    449508,
+    449507,
+    449506,
+    449505,
+    449503,
+    449504,
+    449502,
+    449501,
+    449932,
+    449931,
+    449933,
+    449934,
+    449935,
+    449936,
+    435373,
+    435374,
+    435372,
+    435371,
+    435370,
+    435369,
+    435368,
+    435367,
+    435366,
+    435365,
+    435364,
+    435363,
+    437188,
+    437187,
+    437183,
+    437184,
+    437186,
+    437185,
+    401190,
+    401189,
+    437182,
+    437181,
+    435359,
+    435360,
+    435358,
+    435357,
+    398948,
+    398947,
+    399703,
+    399704,
 )
 
 
@@ -27,10 +69,9 @@ class StudySegment:
 
         self.segment_ids = segment_ids
         self.highest_comfort_level = highest_comfort_level
-
-        self.miles = self.__generate_proximate_blobs()
         self.__create_study_segment()
         self.__buffer_study_segment()
+        self.miles = self.__generate_proximate_blobs()
         self.__handle_parking_lots()
 
         self.total_pop = self.pull_stat(
@@ -108,7 +149,7 @@ class StudySegment:
                 create table blobs as
                 select st_concavehull(a.geom, .85) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
                     from data_viz.lts_{self.highest_comfort_level}islands a 
-                    inner join data_viz.study_segment b
+                    inner join data_viz.study_segment_buffer b
                     on st_intersects(a.geom,b.geom)
                     where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
                 create or replace view data_viz.blobs_union as 
