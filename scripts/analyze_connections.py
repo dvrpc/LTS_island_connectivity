@@ -30,7 +30,7 @@ class StudySegment:
             "hislat2020", "fdw_gis.censusblock2020_demographics", "polygon"
         )
         self.circuit = self.pull_stat("circuit", "fdw_gis.circuittrails", "line")
-        self.firms = self.pull_stat("munname", "fdw_gis.nets", "point")
+        self.jobs = self.pull_stat("coname", "fdw_gis.nets", "point")
         self.bike_crashes = self.pull_stat(
             "bike", "fdw_gis.bikepedcrashes", "point", "data_viz.study_segment_buffer"
         )
