@@ -5,7 +5,7 @@ db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
 
 
-generate_islands(db, "ped_network", "sw")
+generate_islands(db, "fdw_gis.pednetwork", "sw")
 generate_islands(
     db, "lts_stress_below_2", "lts_1"
 )  # generates islands composed of lts 2, 3, and 4 segments

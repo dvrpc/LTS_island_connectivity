@@ -21,7 +21,7 @@ def import_data():
     db.execute(
         f"""
 
-    DROP SCHEMA fdw_gis CASCADE;
+    DROP SCHEMA if exists fdw_gis CASCADE;
 
     CREATE SCHEMA if not exists fdw_gis;
 
@@ -44,8 +44,11 @@ def import_data():
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.bikepedcrashes CASCADE;
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.nets CASCADE;
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.landuse_selection CASCADE;
+    DROP MATERIALIZED VIEW IF EXISTS fdw_gis.pednetwork CASCADE;
+    DROP MATERIALIZED VIEW IF EXISTS public.municipalboundaries CASCADE;
     CREATE OR REPLACE VIEW  fdw_gis.lts_full as (select *, gid as dvrpc_id from fdw_gis.lts_network where typeno != '22' and typeno != '82');
     CREATE MATERIALIZED VIEW fdw_gis.nets as (select * from fdw_gis.nets_2015);
+    CREATE MATERIALIZED VIEW fdw_gis.pednetwork as (select objectid, line_type, feat_type, shape as geom from fdw_gis.pedestriannetwork_lines);
     CREATE MATERIALIZED VIEW fdw_gis.censusblock2020_demographics as (select db.*, (db.totpop2020 - db.whitenh2020) as nonwhite, cb.geoid, cb.shape from fdw_gis.deccen_2020_block db inner join fdw_gis.census_blocks_2020 cb on cb.geoid = db.geocode); 
     CREATE MATERIALIZED VIEW  fdw_gis.bikepedcrashes as (select st_transform(a.shape,26918) as shape, count(*) filter (where isbycyclist = 'Y') as bike, count(*) filter (where isbycyclist is null) as ped from fdw_gis.crash_newjersey a inner join fdw_gis.crash_nj_pedestrians b on a.casenumber = b.casenumber group by a.shape, a.casenumber);
     CREATE MATERIALIZED VIEW fdw_gis.landuse_selection as (
@@ -56,7 +59,8 @@ def import_data():
         or lu15subn = 'Transportation: Rail Right-of-Way' 
         or lu15subn like 'Commercial%'
         or lu15subn like 'Institutional%'
-    )
+    );
+    CREATE MATERIALIZED VIEW public.municipalboundaries as (select objectid, state_name, co_name, mun_name, mun_label, mun_type, label_code, geoid, sq_feet, acres, shape as geom from fdw_gis.municipalboundaries);
 
     """
     )
@@ -69,7 +73,9 @@ def make_low_stress_lts(lts_level: int = 3):
         f"""
         drop table if exists lts_stress_below_{lts_level};
         create table lts_stress_below_{lts_level} as(
-        select * from lts_full where lts_score::int < {lts_level})
+        select * from fdw_gis.lts_full where lts_score::int < {lts_level});
+        alter table lts_stress_below_{lts_level}
+        rename shape to geom;
         """
     )
 
