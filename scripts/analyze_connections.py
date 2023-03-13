@@ -5,8 +5,38 @@ gis_db = Database.from_config("gis", "gis")
 
 
 dvrpc_ids = (
-448494,448493,401465,401466,401463,401464,401462,401461,405416,405415,405411,405412,405414,405413,405409,405410,405407,405408,405405,405406,405403,405404,405401,405402,405399,405400,405398,405397,405396,405395
-        )
+    448494,
+    448493,
+    401465,
+    401466,
+    401463,
+    401464,
+    401462,
+    401461,
+    405416,
+    405415,
+    405411,
+    405412,
+    405414,
+    405413,
+    405409,
+    405410,
+    405407,
+    405408,
+    405405,
+    405406,
+    405403,
+    405404,
+    405401,
+    405402,
+    405399,
+    405400,
+    405398,
+    405397,
+    405396,
+    405395,
+)
+
 
 class StudySegment:
     def __init__(self, segment_ids: tuple, highest_comfort_level: int = 2) -> None:
@@ -55,7 +85,6 @@ class StudySegment:
             "point",
             "data_viz.parkinglot_union_lts_islands",
         )
-        
 
     def __create_study_segment(self):
 
@@ -106,19 +135,20 @@ class StudySegment:
         mileage_q = """select sum(size_miles) from blobs"""
         return round(db.query_as_singleton(mileage_q))
 
-    def __handle_parking_lots(self, join_table:str='blobs_union'):
-        
+    def __handle_parking_lots(self, join_table: str = "blobs_union"):
+
         """
         Grabs proximate parking lots and their associated land uses, returns all.
 
         This helps avoid undercounting where essential services might not be on an island, but accessible from the segment via the parking lot."""
-        
-        if self.has_isochrone == True:
-            join_table = 'isochrone'
-        elif self.has_isochrone == False:
-            join_table = 'blobs_union'
 
-        db.execute(f"""
+        if self.has_isochrone == True:
+            join_table = "isochrone"
+        elif self.has_isochrone == False:
+            join_table = "blobs_union"
+
+        db.execute(
+            f"""
         create or replace view data_viz.proximate_lu as 
             select a.uid, a.geom from fdw_gis.landuse_selection a
                 inner join data_viz.study_segment_buffer b
@@ -141,25 +171,27 @@ class StudySegment:
 
     def __low_stress_touching_study_buffer(self):
         """Study segment does not exist in lts_stress_below segment, so grab any touching segments that do."""
-        
+
         touching_segs = db.query_as_singleton(
-        f"""
+            f"""
         select array_agg(dvrpc_id)
         from data_viz.study_segment_buffer a 
         inner join lts_stress_below_{self.highest_comfort_level} b
         on st_intersects(a.geom, b.geom)
-        """)
+        """
+        )
 
         return touching_segs
 
-    def __create_isochrone(self, travel_time:int=15):
+    def __create_isochrone(self, travel_time: int = 15):
         """
         Creates isochrone based on study_segment
         """
         ls_touching_segment = self.__low_stress_touching_study_buffer()
         ls_touching_segment = tuple(ls_touching_segment)
 
-        db.execute(f"""
+        db.execute(
+            f"""
         drop materialized view if exists data_viz.isochrone;
         create materialized view data_viz.isochrone as 
          with nodes as (
@@ -176,10 +208,10 @@ class StudySegment:
          select 1 as uid, st_concavehull(st_union(b.geom), .8) as geom from nodes a
          inner join lts_stress_below_3 b 
          on a.id = b."source"
-                   """)
+                   """
+        )
 
-
-    def __decide_scope(self, mileage:int=1000):
+    def __decide_scope(self, mileage: int = 1000):
         """
         Decides if isochrone should be created or not based on mileage of connected islands
         """
@@ -188,7 +220,6 @@ class StudySegment:
             self.has_isochrone = True
         else:
             self.has_isochrone = False
-
 
     def pull_stat(
         self, column: str, table: str, geom_type: str, polygon: str = "blobs"
@@ -202,13 +233,13 @@ class StudySegment:
         :param str polygon: the polygon that has what you're interested in. default is blob, but could also be a buffer of road segment.
 
         """
-        if self.has_isochrone == True and polygon == 'blobs':
+        if self.has_isochrone == True and polygon == "blobs":
             polygon = "data_viz.isochrone"
-        elif self.has_isochrone == False and polygon != 'blobs':
+        elif self.has_isochrone == False and polygon != "blobs":
             polygon = polygon
-        
+
         geom_type = geom_type.lower()
-        
+
         if geom_type == "polygon":
             q = f"""
                 with total as(
@@ -219,7 +250,7 @@ class StudySegment:
         """
             sum_poly = db.query_as_singleton(q)
             return int(round(sum_poly, -2))
-        
+
         if geom_type == "point":
             df = db.df(
                 f"""select count(a.{column}), a.{column} from {table} a, {polygon} b
@@ -229,7 +260,7 @@ class StudySegment:
             # zips up dataframe containing count by column attribute of point
             df_dict = df.to_dict("records")
             return df_dict
-        
+
         if geom_type == "line":
             df = db.df(
                 f"""
@@ -240,20 +271,21 @@ class StudySegment:
             )
             df_dict = df.to_dict("records")
             return df_dict
-        
+
     def pull_islands(self):
 
         """Pulls islands connecting to study segment, returns geojson for use in web viewer."""
 
         geojson = db.query_as_singleton(
-        f"""select st_asgeojson(st_union(a.geom)) 
+            f"""select st_asgeojson(st_union(a.geom)) 
         from data_viz.lts_{self.highest_comfort_level} a 
         inner join data_viz.study_segment_buffer b
         on st_intersects(a.geom,b.geom)
         where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
-        """)
+        """
+        )
         return geojson
-    
+
     def pull_geometry(
         self, input_table: str, export_table: str, overlap_table: str, columns: str
     ):
