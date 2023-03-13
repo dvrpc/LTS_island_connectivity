@@ -24,7 +24,7 @@ for value in gapslist:
             create table lts{value}gaps as select * from fdw_gis.lts_full lf where lf.lts_score::int > 2;
             alter table lts{value}gaps add column source integer;
             alter table lts{value}gaps add column target integer;
-            select pgr_createTopology('lts{value}gaps', 0.0005, 'geom', 'dvrpc_id');
+            select pgr_createTopology('lts{value}gaps', 0.0005, 'shape', 'dvrpc_id');
             create or replace view lts{value}nodes as 
                 select id, st_centroid(st_collect(pt)) as geom
                 from (
