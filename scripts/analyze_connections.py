@@ -55,6 +55,7 @@ class StudySegment:
             "point",
             "data_viz.parkinglot_union_lts_islands",
         )
+        
 
     def __create_study_segment(self):
 
@@ -240,6 +241,19 @@ class StudySegment:
             df_dict = df.to_dict("records")
             return df_dict
         
+    def pull_islands(self):
+
+        """Pulls islands connecting to study segment, returns geojson for use in web viewer."""
+
+        geojson = db.query_as_singleton(
+        f"""select st_asgeojson(st_union(a.geom)) 
+        from data_viz.lts_{self.highest_comfort_level} a 
+        inner join data_viz.study_segment_buffer b
+        on st_intersects(a.geom,b.geom)
+        where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
+        """)
+        return geojson
+    
     def pull_geometry(
         self, input_table: str, export_table: str, overlap_table: str, columns: str
     ):
