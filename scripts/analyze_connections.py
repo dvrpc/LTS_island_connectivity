@@ -68,7 +68,7 @@ class StudySegment:
         db.execute(
             f"""drop table if exists data_viz.study_segment;
                 create table data_viz.study_segment as 
-                    select st_collect(geom) as geom, avg(lts_score::int) 
+                    select st_collect(shape) as geom, avg(lts_score::int) 
                     from lts{self.highest_comfort_level}gaps where dvrpc_id in {self.segment_ids};
             """
         )
@@ -94,7 +94,7 @@ class StudySegment:
             f"""drop table if exists blobs CASCADE;
                 create table blobs as
                 select st_concavehull(a.geom, .85) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
-                    from data_viz.lts_{self.highest_comfort_level}islands a 
+                    from data_viz.lts_{self.highest_comfort_level} a 
                     inner join data_viz.study_segment_buffer b
                     on st_intersects(a.geom,b.geom)
                     where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
