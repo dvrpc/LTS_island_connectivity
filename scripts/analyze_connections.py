@@ -143,21 +143,21 @@ class StudySegment:
         Creates isochrone based on study_segment
         """
         db.execute(f"""
-        drop materialized view if exists isochrone;
-        create materialized view isochrone as 
+        drop materialized view if exists data_viz.isochrone;
+        create materialized view data_viz.isochrone as 
          with nodes as (
          SELECT *
           FROM pgr_drivingDistance(
-            'SELECT dvrpc_id as id, source, target, traveltime_min as cost FROM lts2gaps',
-            array(select "source" from lts2nodes a
-                 inner join lts2gaps b
+            'SELECT dvrpc_id as id, source, target, traveltime_min as cost FROM lts{self.highest_comfort_level}gaps',
+            array(select "source" from lts{self.highest_comfort_level}nodes a
+                 inner join lts{self.highest_comfort_level}gaps b
                  on a.id = b."source" 
                  where b.dvrpc_id in (448494,448493,401463,401464)), 
              15, false) as di
-         JOIN lts2nodes pt
+         JOIN lts{self.highest_comfort_level}nodes pt
          ON di.node = pt.id)
          select 1 as uid, st_concavehull(st_union(b.shape), .8) as geom from nodes a
-         inner join lts2gaps b 
+         inner join lts{self.highest_comfort_level}gaps b 
          on a.id = b."source" 
                    """)
 
