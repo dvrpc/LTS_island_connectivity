@@ -148,17 +148,17 @@ class StudySegment:
          with nodes as (
          SELECT *
           FROM pgr_drivingDistance(
-            'SELECT dvrpc_id as id, source, target, traveltime_min as cost FROM lts{self.highest_comfort_level}gaps',
-            array(select "source" from lts{self.highest_comfort_level}nodes a
-                 inner join lts{self.highest_comfort_level}gaps b
+            'SELECT dvrpc_id as id, source, target, traveltime_min as cost FROM lts_stress_below_3',
+            array(select "source" from lts3nodes a
+                 inner join lts_stress_below_3 b
                  on a.id = b."source" 
-                 where b.dvrpc_id in (448494,448493,401463,401464)), 
+                 where b.dvrpc_id in (449935,449936,402687,415783,415784)), 
              15, false) as di
-         JOIN lts{self.highest_comfort_level}nodes pt
+         JOIN lts3nodes pt
          ON di.node = pt.id)
-         select 1 as uid, st_concavehull(st_union(b.shape), .8) as geom from nodes a
-         inner join lts{self.highest_comfort_level}gaps b 
-         on a.id = b."source" 
+         select 1 as uid, st_concavehull(st_union(b.geom), .8) as geom from nodes a
+         inner join lts_stress_below_3 b 
+         on a.id = b."source"
                    """)
 
 
