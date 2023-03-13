@@ -5,7 +5,7 @@ gis_db = Database.from_config("gis", "gis")
 
 
 dvrpc_ids = (
-        448494,448493,401463,401464,401465,401466,401462,401461,405416,405415,405414,405413,405411,405412,405409,405410,405407,405408,405405,405406,405403,405404,405401,405402,405399,405400,405398,405397,405396,405395
+448494,448493,401465,401466,401463,401464,401462,401461,405416,405415,405411,405412,405414,405413,405409,405410,405407,405408,405405,405406,405403,405404,405401,405402,405399,405400,405398,405397,405396,405395
         )
 
 class StudySegment:
@@ -138,10 +138,26 @@ class StudySegment:
         """
         )
 
+    def __low_stress_touching_study_buffer(self):
+        """Study segment does not exist in lts_stress_below segment, so grab any touching segments that do."""
+        
+        touching_segs = db.query_as_singleton(
+        f"""
+        select array_agg(dvrpc_id)
+        from data_viz.study_segment_buffer a 
+        inner join lts_stress_below_{self.highest_comfort_level} b
+        on st_intersects(a.geom, b.geom)
+        """)
+
+        return touching_segs
+
     def __create_isochrone(self, travel_time:int=15):
         """
         Creates isochrone based on study_segment
         """
+        ls_touching_segment = self.__low_stress_touching_study_buffer()
+        ls_touching_segment = tuple(ls_touching_segment)
+
         db.execute(f"""
         drop materialized view if exists data_viz.isochrone;
         create materialized view data_viz.isochrone as 
@@ -152,7 +168,7 @@ class StudySegment:
             array(select "source" from lts3nodes a
                  inner join lts_stress_below_3 b
                  on a.id = b."source" 
-                 where b.dvrpc_id in (449935,449936,402687,415783,415784)), 
+                 where b.dvrpc_id in {ls_touching_segment}), 
              15, false) as di
          JOIN lts3nodes pt
          ON di.node = pt.id)

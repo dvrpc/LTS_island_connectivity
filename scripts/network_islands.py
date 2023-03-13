@@ -22,9 +22,9 @@ for value in gapslist:
     db.execute(
             
         f"""drop table if exists lts{value}gaps CASCADE;
-            create table lts{value}gaps as select * from fdw_gis.lts_full lf where lf.lts_score::int > {stressbelow};
-            alter table lts_stress_below_{stressbelow} add column source integer;
-            alter table lts_stress_below_{stressbelow} add column target integer;
+            create table lts{value}gaps as select * from fdw_gis.lts_full lf where lf.lts_score::int > {value};
+            alter table lts_stress_below_{stressbelow} add column if not exists source integer;
+            alter table lts_stress_below_{stressbelow} add column if not exists target integer;
             select pgr_createTopology('lts_stress_below_{stressbelow}', 0.0005, 'geom', 'dvrpc_id');
             create or replace view lts{stressbelow}nodes as 
                 select id, st_centroid(st_collect(pt)) as geom
@@ -38,9 +38,9 @@ for value in gapslist:
                 ) 
                 ) as foo
                 group by id;
-            alter table lts_stress_below_{stressbelow} add column length_m integer;
+            alter table lts_stress_below_{stressbelow} add column if not exists length_m integer;
             update lts_stress_below_{stressbelow} set length_m = st_length(st_transform(geom,26918));
-            alter table lts_stress_below_{stressbelow} add column traveltime_min double precision;
+            alter table lts_stress_below_{stressbelow} add column if not exists traveltime_min double precision;
             update lts_stress_below_{stressbelow} set traveltime_min = length_m  / 16000.0 * 60; -- 16 kms per hr, about 10 mph. low range of beginner cyclist speeds
 
             """
