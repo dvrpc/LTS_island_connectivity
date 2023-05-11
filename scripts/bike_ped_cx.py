@@ -77,20 +77,27 @@ class BikeSegment:
     def __create_study_segment(
         self, table: str, network_type: str, highest_comfort_level: str = 2
     ):
-        if network_type = "sidewalk":
-            highest_comfort_level = None
-            id = 
+        """
+        Creates a study segment based on a collection of uids.
 
         """
-        Creates a study segment based on uids.
 
-        """
+        if network_type == "sidewalk":
+            lts_level = None
+            id = "objectid"
+            segment_field = "avg(sw_ratio)"
+        elif network_type == "lts":
+            id = "dvrpc_id"
+            lts_level = self.highest_comfort_level
+            segment_field = "avg(lts+score::int)"
+        else:
+            raise Exception("network_type must be 'lts' or 'sidewalk'")
 
         db.execute(
             f"""drop table if exists data_viz.{network_type}_study_segment;
                 create table data_viz.{network_type}study_segment as 
-                    select st_collect(shape) as geom, avg(lts_score::int) 
-                    from {table}{self.highest_comfort_level}gaps where dvrpc_id in {self.segment_ids};
+                    select st_collect(shape) as geom, {segment_field} 
+                    from {table}{lts_level}gaps where {id} in {self.segment_ids};
             """
         )
 
