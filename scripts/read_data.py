@@ -35,7 +35,7 @@ def import_data():
         SERVER gis_bridge
         OPTIONS (user '{gis_db.connection_params['un']}', password '{gis_db.connection_params['pw']}');
 
-    IMPORT FOREIGN SCHEMA transportation limit to (circuittrails, pedestriannetwork_lines, lts_network, crash_newjersey, crash_nj_pedestrians, passengerrailstations) from server gis_bridge into fdw_gis;
+    IMPORT FOREIGN SCHEMA transportation limit to (circuittrails, pedestriannetwork_lines, pedestriannetwork_gaps, lts_network, crash_newjersey, crash_nj_pedestrians, passengerrailstations) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA boundaries limit to (municipalboundaries) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA planning limit to (eta_essentialservicespts, dvrpc_landuse_2015) from server gis_bridge into fdw_gis;
     IMPORT FOREIGN SCHEMA demographics limit to (ipd_2020, deccen_2020_block, census_blocks_2020) from server gis_bridge into fdw_gis;
@@ -45,10 +45,12 @@ def import_data():
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.nets CASCADE;
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.landuse_selection CASCADE;
     DROP MATERIALIZED VIEW IF EXISTS fdw_gis.pednetwork CASCADE;
-    DROP MATERIALIZED VIEW IF EXISTS public.municipalboundaries CASCADE;
+    DROP MATERIALIZED VIEW IF EXISTS fdw_gis.pedgaps CASCADE;
+    DROP TABLE IF EXISTS public.municipalboundaries CASCADE;
     CREATE OR REPLACE VIEW  fdw_gis.lts_full as (select *, gid as dvrpc_id from fdw_gis.lts_network where typeno != '22' and typeno != '82');
     CREATE MATERIALIZED VIEW fdw_gis.nets as (select * from fdw_gis.nets_2015);
     CREATE MATERIALIZED VIEW fdw_gis.pednetwork as (select objectid, line_type, feat_type, shape as geom from fdw_gis.pedestriannetwork_lines);
+    CREATE MATERIALIZED VIEW fdw_gis.pedgaps as (select objectid, sw_ratio, shape as geom from fdw_gis.pedestriannetwork_gaps);
     CREATE MATERIALIZED VIEW fdw_gis.censusblock2020_demographics as (select db.*, (db.totpop2020 - db.whitenh2020) as nonwhite, cb.geoid, cb.shape from fdw_gis.deccen_2020_block db inner join fdw_gis.census_blocks_2020 cb on cb.geoid = db.geocode); 
     CREATE MATERIALIZED VIEW  fdw_gis.bikepedcrashes as (select st_transform(a.shape,26918) as shape, count(*) filter (where isbycyclist = 'Y') as bike, count(*) filter (where isbycyclist is null) as ped from fdw_gis.crash_newjersey a inner join fdw_gis.crash_nj_pedestrians b on a.casenumber = b.casenumber group by a.shape, a.casenumber);
     CREATE MATERIALIZED VIEW fdw_gis.landuse_selection as (
@@ -68,7 +70,8 @@ def import_data():
 
 def make_low_stress_lts(lts_level: int = 3):
     """Make a low stress network based on a certain threshold. Returns LTS network with
-    all segments below specified lts_level (i.e. if write 'lts_level=3', it will create select LTS 1 and 2 as a new table.)"""
+    all segments below specified lts_level (i.e. if write 'lts_level=3', it will create select LTS 1 and 2 as a new table.)
+    """
     db.execute(
         f"""
         drop table if exists lts_stress_below_{lts_level};
@@ -81,7 +84,6 @@ def make_low_stress_lts(lts_level: int = 3):
 
 
 if __name__ == "__main__":
-
     import_data()
     make_low_stress_lts(4)
     make_low_stress_lts(3)
