@@ -22,7 +22,7 @@ dvrpc_ids = (
 )
 
 
-class StudySegment:
+class BikeSegment:
     def __init__(self, segment_ids: tuple, highest_comfort_level: int = 2) -> None:
         self.segment_ids = segment_ids
         self.highest_comfort_level = highest_comfort_level
@@ -285,7 +285,7 @@ class StudySegment:
         return "geometry exported to views, ready to use"
 
 
-a = StudySegment(dvrpc_ids)
+a = BikeSegment(dvrpc_ids)
 attrs = vars(a)
 a.pull_islands()
 for i in attrs:
