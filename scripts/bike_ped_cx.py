@@ -4,7 +4,30 @@ db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
 
 
-class SidewalkSegment:
+dvrpc_ids = (
+    444325,
+    444326,
+    444327,
+    444328,
+    444330,
+    444329,
+    444324,
+    444323,
+    444320,
+    444319,
+    444318,
+    444317,
+    444316,
+    444315,
+)
+
+
+class StudySegment:
+    def __init__(self) -> None:
+        pass
+
+
+class BikeSegment:
     def __init__(self, segment_ids: tuple, highest_comfort_level: int = 2) -> None:
         self.segment_ids = segment_ids
         self.highest_comfort_level = highest_comfort_level
@@ -51,19 +74,23 @@ class SidewalkSegment:
             "data_viz.parkinglot_union_lts_islands",
         )
 
-    def __create_study_segment(self):
+    def __create_study_segment(
+        self, table: str, network_type: str, highest_comfort_level: str = 2
+    ):
+        if network_type = "sidewalk":
+            highest_comfort_level = None
+            id = 
+
         """
         Creates a study segment based on uids.
 
-        lts_gaps_table = the table with appropriate gaps for that island selection
-        (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
         """
 
         db.execute(
-            f"""drop table if exists data_viz.study_segment;
-                create table data_viz.study_segment as 
+            f"""drop table if exists data_viz.{network_type}_study_segment;
+                create table data_viz.{network_type}study_segment as 
                     select st_collect(shape) as geom, avg(lts_score::int) 
-                    from lts{self.highest_comfort_level}gaps where dvrpc_id in {self.segment_ids};
+                    from {table}{self.highest_comfort_level}gaps where dvrpc_id in {self.segment_ids};
             """
         )
 
@@ -267,7 +294,7 @@ class SidewalkSegment:
         return "geometry exported to views, ready to use"
 
 
-a = SidewalkSegment(dvrpc_ids)
+a = BikeSegment(dvrpc_ids)
 attrs = vars(a)
 a.pull_islands()
 for i in attrs:
