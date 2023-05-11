@@ -5,42 +5,25 @@ gis_db = Database.from_config("gis", "gis")
 
 
 dvrpc_ids = (
-    448494,
-    448493,
-    401465,
-    401466,
-    401463,
-    401464,
-    401462,
-    401461,
-    405416,
-    405415,
-    405411,
-    405412,
-    405414,
-    405413,
-    405409,
-    405410,
-    405407,
-    405408,
-    405405,
-    405406,
-    405403,
-    405404,
-    405401,
-    405402,
-    405399,
-    405400,
-    405398,
-    405397,
-    405396,
-    405395,
+    444325,
+    444326,
+    444327,
+    444328,
+    444330,
+    444329,
+    444324,
+    444323,
+    444320,
+    444319,
+    444318,
+    444317,
+    444316,
+    444315,
 )
 
 
 class StudySegment:
     def __init__(self, segment_ids: tuple, highest_comfort_level: int = 2) -> None:
-
         self.segment_ids = segment_ids
         self.highest_comfort_level = highest_comfort_level
         self.__create_study_segment()
@@ -87,7 +70,6 @@ class StudySegment:
         )
 
     def __create_study_segment(self):
-
         """
         Creates a study segment based on uids.
 
@@ -105,7 +87,8 @@ class StudySegment:
 
     def __buffer_study_segment(self, distance: int = 30):
         """
-        Creates a buffer around the study segment. Default for distance is 30m (100 ft) assuming your data is using meteres"""
+        Creates a buffer around the study segment. Default for distance is 30m (100 ft) assuming your data is using meteres
+        """
 
         db.execute(
             f"""drop table if exists data_viz.study_segment_buffer CASCADE;
@@ -115,7 +98,6 @@ class StudySegment:
         )
 
     def __generate_proximate_blobs(self):
-
         """
         Evaluates which islands touch the study segment. returns total mileage of low-stress islands connected by new study_segment.
 
@@ -136,11 +118,11 @@ class StudySegment:
         return round(db.query_as_singleton(mileage_q))
 
     def __handle_parking_lots(self, join_table: str = "blobs_union"):
-
         """
         Grabs proximate parking lots and their associated land uses, returns all.
 
-        This helps avoid undercounting where essential services might not be on an island, but accessible from the segment via the parking lot."""
+        This helps avoid undercounting where essential services might not be on an island, but accessible from the segment via the parking lot.
+        """
 
         if self.has_isochrone == True:
             join_table = "isochrone"
@@ -273,10 +255,10 @@ class StudySegment:
             return df_dict
 
     def pull_islands(self):
-
         """Pulls islands connecting to study segment, returns geojson for use in web viewer."""
 
-        db.execute(f"""create or replace view data_viz.accessed_islands as
+        db.execute(
+            f"""create or replace view data_viz.accessed_islands as
             select 1 as uid, st_union(a.geom) as geom
             from data_viz.lts_{self.highest_comfort_level} a 
             inner join data_viz.study_segment_buffer b
@@ -284,14 +266,15 @@ class StudySegment:
             where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
             """
         )
-        geojson = db.query_as_singleton("""select st_asgeojson(geom) from data_viz.accessed_islands""")
+        geojson = db.query_as_singleton(
+            """select st_asgeojson(geom) from data_viz.accessed_islands"""
+        )
 
         return geojson
 
     def pull_geometry(
         self, input_table: str, export_table: str, overlap_table: str, columns: str
     ):
-
         """
         Creates a view of the needed geometry for later use by the API.
 
@@ -305,5 +288,5 @@ class StudySegment:
 a = StudySegment(dvrpc_ids)
 attrs = vars(a)
 a.pull_islands()
-# for i in attrs:
-    # print(i, attrs[i])
+for i in attrs:
+    print(i, attrs[i])
