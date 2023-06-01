@@ -29,7 +29,9 @@ map.on("load", () => {
         ],
       },
     },
-  });
+  },
+  'road-intersection'
+  );
 
   map.addLayer({
     id: "clicked",
@@ -44,7 +46,7 @@ map.on("load", () => {
         0.7,
         0,
       ],
-      "line-color": "light blue",
+      "line-color": "white",
     },
   });
 
