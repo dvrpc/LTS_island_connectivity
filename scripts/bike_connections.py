@@ -1,32 +1,26 @@
 from pg_data_etl import Database
+import pandas as pd
+import json
+
+# this file is a working copy of the older file. it works for bike segments, but the new file (bike_ped_cx) will ultimately be used later.
 
 db = Database.from_config("lts", "localhost")
 gis_db = Database.from_config("gis", "gis")
 
 
-dvrpc_ids = (
-    444325,
-    444326,
-    444327,
-    444328,
-    444330,
-    444329,
-    444324,
-    444323,
-    444320,
-    444319,
-    444318,
-    444317,
-    444316,
-    444315,
-)
+dvrpc_ids = input("what are the segment ids?")
+dvrpc_ids = tuple(int(x) for x in dvrpc_ids.split(","))
+name = input("what is the segment name?")
 
 
 class BikeSegment:
-    def __init__(self, segment_ids: tuple, highest_comfort_level: int = 2) -> None:
+    def __init__(
+        self, segment_name: str, segment_ids: tuple, highest_comfort_level: int = 2
+    ) -> None:
+        self.segment_name = segment_name
         self.segment_ids = segment_ids
         self.highest_comfort_level = highest_comfort_level
-        self.__create_study_segment()
+        self.geom = self.__create_study_segment()
         self.__buffer_study_segment()
         self.miles = self.__generate_proximate_blobs()
         self.has_isochrone = None
@@ -56,7 +50,7 @@ class BikeSegment:
             "data_viz.study_segment_buffer",
             "bike, ped",
         )
-        self.essential_serves = self.pull_stat(
+        self.essential_services = self.pull_stat(
             "type",
             "fdw_gis.eta_essentialservicespts",
             "point",
@@ -68,6 +62,9 @@ class BikeSegment:
             "point",
             "data_viz.parkinglot_union_lts_islands",
         )
+        self.pull_islands()
+        self.summarize_stats()
+        self.convert_wkt_to_geom()
 
     def __create_study_segment(self):
         """
@@ -84,6 +81,12 @@ class BikeSegment:
                     from lts{self.highest_comfort_level}gaps where dvrpc_id in {self.segment_ids};
             """
         )
+
+        geom_string = db.query_as_singleton(
+            """select st_transform(st_geomfromtext(st_astext(geom), 26918),4326) as geom 
+            from data_viz.study_segment"""
+        )
+        return geom_string
 
     def __buffer_study_segment(self, distance: int = 30):
         """
@@ -121,7 +124,8 @@ class BikeSegment:
         """
         Grabs proximate parking lots and their associated land uses, returns all.
 
-        This helps avoid undercounting where essential services might not be on an island, but accessible from the segment via the parking lot.
+        This helps avoid undercounting where essential services might not be on an
+        island, but accessible from the segment via the parking lot.
         """
 
         if self.has_isochrone == True:
@@ -280,13 +284,35 @@ class BikeSegment:
 
         """
         db.execute(
-            f"""create or replace view data_viz.geo_export_{export_table} as select {columns}, shape from {input_table} a inner join {overlap_table} b on st_intersects(a.shape, b.geom)"""
+            f"""create or replace view data_viz.geo_export_{export_table} as 
+            select {columns}, shape from {input_table} a 
+            inner join {overlap_table} b on st_intersects(a.shape, b.geom)"""
         )
         return "geometry exported to views, ready to use"
 
+    def summarize_stats(self):
+        """
+        Summarizes all connections that a segment makes
+        """
+        attrs = vars(self)
+        df = pd.json_normalize(json.loads(json.dumps(attrs, indent=2)))
+        for value in [
+            "circuit",
+            "jobs",
+            "essential_services",
+            "rail_stations",
+            "bike_crashes",
+            "ped_crashes",
+        ]:
+            df[f"{value}"] = df[f"{value}"].apply(json.dumps)
+        col_to_move = df.pop("geom")
+        df.insert(len(df.columns), "geom", col_to_move)
 
-a = BikeSegment(dvrpc_ids)
-attrs = vars(a)
-a.pull_islands()
-for i in attrs:
-    print(i, attrs[i])
+        db.import_dataframe(df, "summaries.all", {"if_exists": "append"})
+
+    def convert_wkt_to_geom(self):
+        q1 = """alter table summaries.all alter column geom type geometry"""
+        db.execute(q1)
+
+
+a = BikeSegment(name, dvrpc_ids)
