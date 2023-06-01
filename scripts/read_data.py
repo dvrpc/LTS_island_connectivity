@@ -21,6 +21,9 @@ def import_data():
     db.execute(
         f"""
 
+    DROP SCHEMA if exists summaries CASCADE;
+    CREATE SCHEMA if not exists summaries;
+
     DROP SCHEMA if exists fdw_gis CASCADE;
 
     CREATE SCHEMA if not exists fdw_gis;
