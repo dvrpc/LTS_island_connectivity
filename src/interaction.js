@@ -1,4 +1,5 @@
 const featurelist = [];
+var clicked = false
 
 const setup_click = (map) => {
   map.on("click", "clicked", (e) => {
@@ -31,4 +32,14 @@ const setup_click = (map) => {
     });
   });
 };
-export { setup_click };
+
+function clickClear() {
+  document.getElementById('clear_button').addEventListener("click", function() {
+    clicked = true
+    console.log(clicked)
+    return clicked
+  });
+}
+
+
+export { setup_click, clickClear };

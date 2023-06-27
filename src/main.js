@@ -1,5 +1,5 @@
 import { makemap } from "./map.js";
-import { setup_click } from "./interaction.js";
+import { setup_click, clickClear } from "./interaction.js";
 let map = makemap();
 map.on("load", () => {
   // LOAD DATA: add vector tileset from DVRPC's server
@@ -51,6 +51,7 @@ map.on("load", () => {
   });
 
   setup_click(map);
+  clickClear();
 });
 
 export { map };
