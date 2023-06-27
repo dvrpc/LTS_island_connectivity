@@ -114,7 +114,7 @@ class BikeSegment:
                     on st_intersects(a.geom,b.geom)
                     where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
                 create or replace view data_viz.blobs_union as 
-                    select 1 as uid, st_union(a.geom) as geom, sum(size_miles) from public.blobs a;
+                    select 1 as uid, st_union(st_union(a.geom, b.geom)) as geom from public.blobs a, data_viz.study_segment_buffer b
                     """,
         )
         mileage_q = """select sum(size_miles) from blobs"""
@@ -208,7 +208,11 @@ class BikeSegment:
             self.has_isochrone = False
 
     def pull_stat(
-        self, column: str, table: str, geom_type: str, polygon: str = "blobs"
+        self,
+        column: str,
+        table: str,
+        geom_type: str,
+        polygon: str = "data_viz.blobs_union",
     ):
         """
         grabs the identified attribute (population, school, etc) within the study area blobs.
@@ -216,12 +220,12 @@ class BikeSegment:
         :param str column: the column you want to pull data from in your database
         :param str table: the table you want to pull data from in your database
         :param str geom_type: the type (point, line, or polygon) of your data
-        :param str polygon: the polygon that has what you're interested in. default is blob, but could also be a buffer of road segment.
+        :param str polygon: the polygon that has what you're interested in. default is blobs_union, but could also be a buffer of road segment.
 
         """
-        if self.has_isochrone == True and polygon == "blobs":
+        if self.has_isochrone == True and polygon == "data_viz.blobs_union":
             polygon = "data_viz.isochrone"
-        elif self.has_isochrone == False and polygon != "blobs":
+        elif self.has_isochrone == False and polygon != "data_viz.blobs_union":
             polygon = polygon
 
         geom_type = geom_type.lower()
