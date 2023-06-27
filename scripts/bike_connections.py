@@ -191,7 +191,7 @@ class BikeSegment:
              15, false) as di
          JOIN lts3nodes pt
          ON di.node = pt.id)
-         select 1 as uid, st_concavehull(st_union(b.geom), .8) as geom from nodes a
+         select 1 as uid, st_concavehull(st_union(st_centroid(b.geom)), .8) as geom from nodes a
          inner join lts_stress_below_3 b 
          on a.id = b."source"
                    """
