@@ -37,6 +37,7 @@ function clickClear() {
   document.getElementById('clear_button').addEventListener("click", function() {
     clicked = true
     console.log(clicked)
+    document.getElementById("segids").innerHTML = [];
     return clicked
   });
 }
