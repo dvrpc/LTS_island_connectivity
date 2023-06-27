@@ -22,15 +22,15 @@ map.on("load", () => {
       "line-color": {
         property: "lts_score",
         stops: [
-          [1, "light green"],
-          [2, "green"],
+          [1, "green"],
+          [2, "light green"],
           [3, "yellow"],
           [4, "red"],
         ],
       },
     },
   },
-  'road-intersection'
+    'road-intersection'
   );
 
   map.addLayer({
