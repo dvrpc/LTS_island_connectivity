@@ -51,7 +51,7 @@ map.on("load", () => {
   });
 
   setup_click(map);
-  clickClear();
+  clickClear(map);
 });
 
 export { map };

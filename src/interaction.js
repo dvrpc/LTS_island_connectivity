@@ -1,5 +1,4 @@
-const featurelist = [];
-var clicked = false
+var featurelist = [];
 
 const setup_click = (map) => {
   map.on("click", "clicked", (e) => {
@@ -33,12 +32,22 @@ const setup_click = (map) => {
   });
 };
 
-function clickClear() {
+const clickClear = (map) => {
   document.getElementById('clear_button').addEventListener("click", function() {
-    clicked = true
-    console.log(clicked)
+    console.log(featurelist)
     document.getElementById("segids").innerHTML = [];
-    return clicked
+    for (const element of featurelist) {
+      map.setFeatureState(
+        {
+          source: "lts_tile",
+          id: element,
+          sourceLayer: "existing_conditions_lts",
+        },
+        { click: false }
+      );
+    }
+
+    featurelist = []
   });
 }
 
