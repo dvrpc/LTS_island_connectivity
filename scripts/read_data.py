@@ -4,7 +4,6 @@ read_data.py
 This script reads data from DVRPC's GIS portal
 and inserts it into a Postgres database.
 
-Requires geo-enabled postgres database (CREATE EXTENSION postgis;)
 """
 
 from pg_data_etl import Database
@@ -17,12 +16,17 @@ def import_data():
     """
     creates a foreign data wrapper, allowing the db to query to make queries from the dvrpc postgres db rather than making a mini-etl pipeline to pull copies in.
     """
-
+    print("creating necessary extensions on database, importing data...")
     db.execute(
         f"""
-
+    CREATE extension postgis;
+    CREATE extension pgrouting;
     DROP SCHEMA if exists summaries CASCADE;
     CREATE SCHEMA if not exists summaries;
+    DROP SCHEMA if exists sidewalk CASCADE;
+    CREATE SCHEMA if not exists sidewalk;
+    DROP SCHEMA if exists lts CASCADE;
+    CREATE SCHEMA if not exists lts;
 
     DROP SCHEMA if exists fdw_gis CASCADE;
 
@@ -75,12 +79,13 @@ def make_low_stress_lts(lts_level: int = 3):
     """Make a low stress network based on a certain threshold. Returns LTS network with
     all segments below specified lts_level (i.e. if write 'lts_level=3', it will create select LTS 1 and 2 as a new table.)
     """
+    print(f"creating low stress bike network for lts_{lts_level}...")
     db.execute(
         f"""
-        drop table if exists lts_stress_below_{lts_level};
-        create table lts_stress_below_{lts_level} as(
+        drop table if exists lts.lts_stress_below_{lts_level};
+        create table lts.lts_stress_below_{lts_level} as(
         select * from fdw_gis.lts_full where lts_score::int < {lts_level});
-        alter table lts_stress_below_{lts_level}
+        alter table lts.lts_stress_below_{lts_level}
         rename shape to geom;
         """
     )
