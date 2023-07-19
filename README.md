@@ -9,6 +9,20 @@ Webmap for segment selection:
 PostGIS
 pgRouting (for isochrone creation)
 
+## Environment
+
+Use:
+`conda env create environment.yml` 
+
+Activate the environment with:
+`conda activate connectivity`
+
+## Makefile
+
+Be sure you've created a Postgres database called "LTS", and that you have the above dependencies installed.
+
+Run `Make all` to import all data and build the islands for this analysis. 
+
 ## TODO
 
 :white_check_mark: import data scripts
@@ -21,7 +35,7 @@ pgRouting (for isochrone creation)
 
 :white_check_mark: refactor to use classes
 
-:black_square_button: add clear button to webmap
+:white_check_mark: add clear button to webmap
 
 :black_square_button: make API , hook to webmap
 
