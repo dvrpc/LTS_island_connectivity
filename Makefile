@@ -1,7 +1,6 @@
 data:
 	@echo "importing initial data..."
-	conda activate connectivity
-	python scripts/read_data.py 
+	python scripts/bh_firewall_read_data.py 
 
 islands:
 	@echo "creating islands for all networks"
