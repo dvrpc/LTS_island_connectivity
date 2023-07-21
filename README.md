@@ -23,6 +23,10 @@ Be sure you've created a Postgres database called "LTS", and that you have the a
 
 Run `Make all` to import all data and build the islands for this analysis. 
 
+Note that this only works behind the firewall. 
+
+If you want to move any of this data to a server, run the makefile behind the firewall, then make a PG_dump of the DB and pg_restore it on your server.
+
 ## TODO
 
 :white_check_mark: import data scripts
