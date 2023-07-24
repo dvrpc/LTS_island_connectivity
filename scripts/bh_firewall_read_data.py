@@ -56,7 +56,7 @@ def make_low_stress_lts(lts_level: int = 3):
         f"""
         drop table if exists lts.lts_stress_below_{lts_level};
         create table lts.lts_stress_below_{lts_level} as(
-        select * from lts_full where lts_score::int < {lts_level});
+        select * from lts.lts_full where lts_score::int < {lts_level});
         """
     )
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     create_schemas(db)
     import_data(
         "select *, gid as dvrpc_id from transportation.lts_network where typeno != '22' and typeno != '82'",
-        "lts_full",
+        "lts.lts_full",
     )
     import_data(
         """select * from demographics.deccen_2020_block db
@@ -76,11 +76,11 @@ if __name__ == "__main__":
     )
     import_data(
         "select * from transportation.pedestriannetwork_lines",
-        "ped_network",
+        "sidewalk.ped_network",
     )
     import_data(
         "select * from transportation.pedestriannetwork_gaps",
-        "ped_network_gaps",
+        "sidewalk.ped_network_gaps",
     )
     import_data(
         "select * from boundaries.municipalboundaries",
