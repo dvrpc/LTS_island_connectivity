@@ -2,10 +2,7 @@ from pg_data_etl import Database
 import pandas as pd
 import json
 
-# this file is a working copy of the older file. it works for bike segments, but the new file (bike_ped_cx) will ultimately be used later.
-
 db = Database.from_config("lts", "localhost")
-gis_db = Database.from_config("gis", "gis")
 
 network_type = input("what is the network type?")
 dvrpc_ids = input("what are the segment ids?")
@@ -23,7 +20,7 @@ class StudySegment:
         self.segment_name = segment_name
         self.segment_ids = segment_ids
         self.highest_comfort_level = self.__determine_if_lts_needed()
-        self.geom = self.__create_study_segment(network_type)
+        self.__create_study_segment(network_type)
         # self.__buffer_study_segment()
         # self.miles = self.__generate_proximate_blobs()
         # self.has_isochrone = None
@@ -31,37 +28,37 @@ class StudySegment:
         # self.__handle_parking_lots()
 
         # self.total_pop = self.pull_stat(
-        #     "totpop2020", "fdw_gis.censusblock2020_demographics", "polygon"
+        #     "totpop2020", "censusblock2020_demographics", "polygon"
         # )
         # self.nonwhite = self.pull_stat(
-        #     "nonwhite", "fdw_gis.censusblock2020_demographics", "polygon"
+        #     "nonwhite", "censusblock2020_demographics", "polygon"
         # )
         # self.hisp_lat = self.pull_stat(
-        #     "hislat2020", "fdw_gis.censusblock2020_demographics", "polygon"
+        #     "hislat2020", "censusblock2020_demographics", "polygon"
         # )
-        # self.circuit = self.pull_stat("circuit", "fdw_gis.circuittrails", "line")
-        # self.jobs = self.pull_stat("coname", "fdw_gis.nets", "point")
+        # self.circuit = self.pull_stat("circuit", "circuittrails", "line")
+        # self.jobs = self.pull_stat("coname", "nets", "point")
         # self.bike_crashes = self.pull_stat(
-        #     "bike", "fdw_gis.bikepedcrashes", "point", "data_viz.study_segment_buffer"
+        #     "bike", "bikepedcrashes", "point", "data_viz.study_segment_buffer"
         # )
         # self.ped_crashes = self.pull_stat(
-        #     "ped", "fdw_gis.bikepedcrashes", "point", "data_viz.study_segment_buffer"
+        #     "ped", "bikepedcrashes", "point", "data_viz.study_segment_buffer"
         # )
         # self.crash_export = self.pull_geometry(
-        #     "fdw_gis.bikepedcrashes",
+        #     "bikepedcrashes",
         #     "bikepedcrashes",
         #     "data_viz.study_segment_buffer",
         #     "bike, ped",
         # )
         # self.essential_services = self.pull_stat(
         #     "type",
-        #     "fdw_gis.eta_essentialservicespts",
+        #     "eta_essentialservicespts",
         #     "point",
         #     "data_viz.parkinglot_union_lts_islands",
         # )
         # self.rail_stations = self.pull_stat(
         #     "type",
-        #     "fdw_gis.passengerrailstations",
+        #     "passengerrailstations",
         #     "point",
         #     "data_viz.parkinglot_union_lts_islands",
         # )
@@ -83,41 +80,34 @@ class StudySegment:
                 "Sorry, your network type is incorrect, and must be either sidewalk or lts."
             )
 
-    def __create_study_segment(self, network_type):
+    def __create_study_segment(self, schema):
         """
         Creates a study segment based on uids.
 
         lts_gaps_table = the table with appropriate gaps for that island selection
         (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
         """
-        if network_type == "sidewalk":
-            gaps_table = "fdw_gis.pedestriannetwork_gaps"
+        if schema == "sidewalk":
+            gaps_table = f"{schema}.pedestriannetwork_gaps"
             ids = "objectid"
             lts_calc = ""
-        elif network_type == "lts":
+        elif schema == "lts":
             gaps_table = f"lts{self.highest_comfort_level}gaps"
             ids == "dvrpc_id"
             lts_calc = ", avg(lts_score::int)"
         else:
-            print("something went wrong, your network type is wrong.")
+            print("something went wrong, pick lts or sidewalk for schema.")
 
         db.execute(
-            f"""drop table if exists data_viz.{network_type}_study_segment;
-                create table data_viz.{network_type}_study_segment as 
+            f"""create or replace view {schema}.study_segment as 
                     select st_collect(shape) as geom {lts_calc} 
                     from {gaps_table} where {ids} in {self.segment_ids};
             """
         )
 
-        geom_string = db.query_as_singleton(
-            f"""select st_transform(st_geomfromtext(st_astext(geom), 26918),4326) as geom 
-            from data_viz.{network_type}_study_segment"""
-        )
-        return geom_string
-
     def __buffer_study_segment(self, distance: int = 30):
         """
-        Creates a buffer around the study segment. Default for distance is 30m (100 ft) assuming your data is using meteres
+        Creates a buffer around the study segment. Default for distance is 30m (100 ft) assuming your data is using meters
         """
 
         db.execute(
@@ -163,13 +153,13 @@ class StudySegment:
         db.execute(
             f"""
         create or replace view data_viz.proximate_lu as 
-            select a.uid, a.geom from fdw_gis.landuse_selection a
+            select a.uid, a.geom from landuse_selection a
                 inner join data_viz.study_segment_buffer b
                 on st_intersects (a.geom, b.geom);
         create or replace view data_viz.proximate_lu_and_touching as
             select 1 as uid, st_union(st_union(a.geom), st_union(b.geom)) as geom
                 from data_viz.proximate_lu a
-                inner join fdw_gis.landuse_selection b 
+                inner join landuse_selection b 
                 on st_touches(a.geom, b.geom)
             where b.lu15subn like 'Parking%'
                 or b.lu15subn like 'Institutional%'
