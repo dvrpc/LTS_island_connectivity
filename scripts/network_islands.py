@@ -2,10 +2,9 @@ from network_routing.gaps.segments.generate_islands import generate_islands
 from pg_data_etl import Database
 
 db = Database.from_config("lts", "localhost")
-gis_db = Database.from_config("gis", "gis")
 
 
-generate_islands(db, "ped_network", "sw", "sidewalk")
+generate_islands(db, "sidewalk.ped_network", "sw", "sidewalk")
 generate_islands(
     db,
     "lts.lts_stress_below_2",
@@ -27,7 +26,7 @@ for value in gapslist:
     stressbelow = value + 1
     db.execute(
         f"""drop table if exists lts{value}gaps CASCADE;
-            create table lts.lts{value}gaps as select * from lts_full lf where lf.lts_score::int > {value};
+            create table lts.lts{value}gaps as select * from lts.lts_full lf where lf.lts_score::int > {value};
             alter table lts.lts_stress_below_{stressbelow} add column if not exists source integer;
             alter table lts.lts_stress_below_{stressbelow} add column if not exists target integer;
             select pgr_createTopology('lts.lts_stress_below_{stressbelow}', 0.0005, 'geom', 'dvrpc_id');
