@@ -75,7 +75,7 @@ if __name__ == "__main__":
         "censusblock2020_demographics",
     )
     import_data(
-        "select * from transportation.pedestriannetwork_lines",
+        "select * from transportation.pedestriannetwork_lines where feat_type != 'UNMARKED'",
         "sidewalk.ped_network",
     )
     import_data(
