@@ -19,13 +19,14 @@ class StudySegment:
         segment_ids: tuple,
         segment_name: str,
         username: str,
+        highest_comfort_level: int = 2,
     ) -> None:
         self.network_type = network_type
         self.segment_ids = segment_ids
         self.segment_name = segment_name
         self.username = username
+        self.highest_comfort_level = highest_comfort_level
         self.__setup_study_segment_tables()
-        self.highest_comfort_level = self.__determine_if_lts_needed()
         self.__create_study_segment()
         self.__buffer_study_segment()
         # self.miles = self.__generate_proximate_blobs()
@@ -71,20 +72,6 @@ class StudySegment:
         # self.pull_islands()
         # self.summarize_stats()
         # self.convert_wkt_to_geom()
-
-    def __determine_if_lts_needed(self):
-        if self.network_type.lower() == "sidewalk":
-            return None
-        elif self.network_type.lower() == "lts":
-            return int(
-                input(
-                    "what is the highest stress level you are planning for? 2 is standard"
-                )
-            )
-        else:
-            raise Exception(
-                "Sorry, your network type is incorrect, and must be either sidewalk or lts."
-            )
 
     def __setup_study_segment_tables(self):
         for value in ["user_segments", "user_buffers", "user_blobs"]:
