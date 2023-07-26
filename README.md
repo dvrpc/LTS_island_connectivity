@@ -44,6 +44,12 @@ BACKUP_FILENAME="backup.sql"
 DUMP_PATH="/home/user/project/backups/${BACKUP_FILENAME}"
 ```
 
+move the backup to your out-of-firewall machine (likely server) and restore it with psql.
+
+note you need to create the target db. go ahead and create postgis and pgrouting extensions too. then run:
+
+`psql -U your_username -h your_host -p your_port -d target_database < backup.sql`
+
 ## TODO
 
 :white_check_mark: import data scripts
