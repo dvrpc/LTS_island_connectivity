@@ -4,23 +4,29 @@ import json
 
 db = Database.from_config("lts", "localhost")
 
-network_type = input("what is the network type?")
-dvrpc_ids = input("what are the segment ids?")
-dvrpc_ids = tuple(int(x) for x in dvrpc_ids.split(","))
-name = input("what is the segment name?")
+# network_type = input("what is the network type?")
+# dvrpc_ids = input("what are the segment ids?")
+# dvrpc_ids = tuple(int(x) for x in dvrpc_ids.split(","))
+# name = input("what is the segment name?")
+# username = input(
+#     "what is your first initial, last name? e.g., jane roberts = jroberts")
 
 
 class StudySegment:
     def __init__(
         self,
         network_type: str,
-        segment_name: str,
         segment_ids: tuple,
+        segment_name: str,
+        username: str,
     ) -> None:
-        self.segment_name = segment_name
+        self.network_type = network_type
         self.segment_ids = segment_ids
+        self.segment_name = segment_name
+        self.username = username
+        self.__setup_study_segment_tables()
         self.highest_comfort_level = self.__determine_if_lts_needed()
-        self.__create_study_segment(network_type)
+        self.__create_study_segment()
         # self.__buffer_study_segment()
         # self.miles = self.__generate_proximate_blobs()
         # self.has_isochrone = None
@@ -67,9 +73,9 @@ class StudySegment:
         # self.convert_wkt_to_geom()
 
     def __determine_if_lts_needed(self):
-        if network_type.lower() == "sidewalk":
+        if self.network_type.lower() == "sidewalk":
             return None
-        elif network_type.lower() == "lts":
+        elif self.network_type.lower() == "lts":
             return int(
                 input(
                     "what is the highest stress level you are planning for? 2 is standard"
@@ -80,29 +86,45 @@ class StudySegment:
                 "Sorry, your network type is incorrect, and must be either sidewalk or lts."
             )
 
-    def __create_study_segment(self, schema):
+    def __setup_study_segment_tables(self):
+        for value in ["user_segments", "user_buffers", "user_blobs"]:
+            query = f"""
+                CREATE TABLE IF NOT EXISTS {self.network_type}.{value}(
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR,
+                    seg_ids INTEGER[],
+                    seg_name VARCHAR,
+                    geom GEOMETRY
+                );
+            """
+            db.execute(query)
+
+    def __create_study_segment(self):
         """
         Creates a study segment based on uids.
 
         lts_gaps_table = the table with appropriate gaps for that island selection
         (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
         """
-        if schema == "sidewalk":
-            gaps_table = f"{schema}.pedestriannetwork_gaps"
+        if self.network_type == "sidewalk":
+            gaps_table = f"{self.network_type}.ped_network_gaps"
             ids = "objectid"
-            lts_calc = ""
-        elif schema == "lts":
+        elif self.network_type == "lts":
             gaps_table = f"lts{self.highest_comfort_level}gaps"
             ids == "dvrpc_id"
-            lts_calc = ", avg(lts_score::int)"
         else:
-            print("something went wrong, pick lts or sidewalk for schema.")
+            print("something went wrong, pick lts or sidewalk for self.network_type.")
+
+        gaps = db.query_as_singleton(
+            f"select st_collect(geom) as geom from {gaps_table} where {ids} in {self.segment_ids}")
+
+        self.segment_ids = list(self.segment_ids)
 
         db.execute(
-            f"""create or replace view {schema}.study_segment as 
-                    select st_collect(shape) as geom {lts_calc} 
-                    from {gaps_table} where {ids} in {self.segment_ids};
-            """
+            f"""
+            INSERT INTO {self.network_type}.user_segments (id, username, seg_ids, seg_name, geom)
+            VALUES (DEFAULT, %s, %s, %s, %s)
+            """, (self.username, self.segment_ids, self.segment_name, gaps)
         )
 
     def __buffer_study_segment(self, distance: int = 30):
@@ -111,10 +133,10 @@ class StudySegment:
         """
 
         db.execute(
-            f"""drop table if exists data_viz.study_segment_buffer CASCADE;
-                    create table data_viz.study_segment_buffer as
-                        select st_buffer(geom, {distance}) as geom from data_viz.study_segment
-                        """
+            f"""create or replace view {self.network_type}.{self.username}_study_segment_buffer as
+                select st_buffer(geom, {distance}) as geom 
+                from {self.network_type}.{self.username}_study_segment
+            """
         )
 
     def __generate_proximate_blobs(self):
@@ -337,4 +359,4 @@ class StudySegment:
 
 
 # a = BikeSegment(name, dvrpc_ids)
-a = StudySegment("sidewalk", name, dvrpc_ids)
+a = StudySegment("sidewalk", (20, 21), "test", "mmorley")
