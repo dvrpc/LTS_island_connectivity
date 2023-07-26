@@ -27,7 +27,7 @@ class StudySegment:
         self.__setup_study_segment_tables()
         self.highest_comfort_level = self.__determine_if_lts_needed()
         self.__create_study_segment()
-        # self.__buffer_study_segment()
+        self.__buffer_study_segment()
         # self.miles = self.__generate_proximate_blobs()
         # self.has_isochrone = None
         # self.__decide_scope()
@@ -129,13 +129,16 @@ class StudySegment:
 
     def __buffer_study_segment(self, distance: int = 30):
         """
-        Creates a buffer around the study segment. Default for distance is 30m (100 ft) assuming your data is using meters
+        Creates a buffer around the study segment. 
+        Default for distance is 30m (100 ft) assuming your data is using meters
         """
 
         db.execute(
-            f"""create or replace view {self.network_type}.{self.username}_study_segment_buffer as
-                select st_buffer(geom, {distance}) as geom 
-                from {self.network_type}.{self.username}_study_segment
+            f"""
+                insert into sidewalk.user_buffers
+                select id, username, seg_ids, seg_name, st_buffer(geom, {distance}) as geom 
+                from {self.network_type}.user_segments
+                where seg_name = '{self.segment_name}'
             """
         )
 
