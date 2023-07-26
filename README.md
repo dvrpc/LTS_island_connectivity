@@ -37,8 +37,8 @@ PG_DUMP_PATH='/usr/bin/pg_dump'
 # uri of the database you're backing up
 DATABASE_URL='postgresql://user:pw@host:port/database'
 
-# name of your backup file, with timestamp if you want it. use double quotes on this variable.
-BACKUP_FILENAME="backup-$(date +%d-%m-%y).sql"
+# name of your backup file. use double quotes.
+BACKUP_FILENAME="backup.sql"
 
 #location of your backup file. use double quotes here too.
 DUMP_PATH="/home/user/project/backups/${BACKUP_FILENAME}"
