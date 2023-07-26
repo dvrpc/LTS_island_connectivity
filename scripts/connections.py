@@ -7,7 +7,7 @@ db = Database.from_config("lts", "localhost")
 # network_type = input("what is the network type?")
 # dvrpc_ids = input("what are the segment ids?")
 # dvrpc_ids = tuple(int(x) for x in dvrpc_ids.split(","))
-# name = input("what is the segment name?")
+name = input("what is the segment name?")
 # username = input(
 #     "what is your first initial, last name? e.g., jane roberts = jroberts")
 
@@ -110,8 +110,8 @@ class StudySegment:
             gaps_table = f"{self.network_type}.ped_network_gaps"
             ids = "objectid"
         elif self.network_type == "lts":
-            gaps_table = f"lts{self.highest_comfort_level}gaps"
-            ids == "dvrpc_id"
+            gaps_table = f"{self.network_type}.lts{self.highest_comfort_level}gaps"
+            ids = "dvrpc_id"
         else:
             print("something went wrong, pick lts or sidewalk for self.network_type.")
 
@@ -135,7 +135,7 @@ class StudySegment:
 
         db.execute(
             f"""
-                insert into sidewalk.user_buffers
+                insert into {self.network_type}.user_buffers
                 select id, username, seg_ids, seg_name, st_buffer(geom, {distance}) as geom 
                 from {self.network_type}.user_segments
                 where seg_name = '{self.segment_name}'
@@ -144,7 +144,8 @@ class StudySegment:
 
     def __generate_proximate_blobs(self):
         """
-        Evaluates which islands touch the study segment. returns total mileage of low-stress islands connected by new study_segment.
+        Evaluates which islands touch the study segment. 
+        Returns total mileage of low-stress islands connected by new study_segment.
 
         """
         db.execute(
@@ -362,4 +363,7 @@ class StudySegment:
 
 
 # a = BikeSegment(name, dvrpc_ids)
-a = StudySegment("sidewalk", (20, 21), "test", "mmorley")
+a = StudySegment("sidewalk", (20, 21), name, "mmorley")
+
+b = StudySegment("lts", (540277, 540278, 540280, 540279,
+                 540276, 540275, 510870, 510869), name, "mmorley")
