@@ -75,12 +75,19 @@ class StudySegment:
 
     def __setup_study_segment_tables(self):
         for value in ["user_segments", "user_buffers", "user_blobs"]:
+            if value == 'user_segments':
+                seg_ids = "seg_ids INTEGER[],"
+                seg_name = "seg_name VARCHAR,"
+            else:
+                seg_ids = ""
+                seg_name = ""
+
             query = f"""
                 CREATE TABLE IF NOT EXISTS {self.network_type}.{value}(
                     id SERIAL PRIMARY KEY,
                     username VARCHAR,
-                    seg_ids INTEGER[],
-                    seg_name VARCHAR,
+                    {seg_ids}
+                    {seg_name}
                     geom GEOMETRY
                 );
             """
@@ -139,7 +146,7 @@ class StudySegment:
         db.execute(
             f"""
                 insert into {self.network_type}.user_buffers
-                select id, username, seg_ids, seg_name, st_buffer(geom, {distance}) as geom 
+                select id, username, st_buffer(geom, {distance}) as geom 
                 from {self.network_type}.user_segments
                 where seg_name = '{self.segment_name}'
             """
