@@ -29,6 +29,7 @@ class StudySegment:
         self.__setup_study_segment_tables()
         self.__create_study_segment()
         self.__buffer_study_segment()
+        self.__generate_proximate_islands()
         # self.miles = self.__generate_proximate_blobs()
         # self.has_isochrone = None
         # self.__decide_scope()
@@ -74,7 +75,7 @@ class StudySegment:
         # self.convert_wkt_to_geom()
 
     def __setup_study_segment_tables(self):
-        for value in ["user_segments", "user_buffers", "user_blobs"]:
+        for value in ["user_segments", "user_buffers", "user_islands", "user_blobs"]:
             if value == 'user_segments':
                 seg_ids = "seg_ids INTEGER[],"
                 seg_name = "seg_name VARCHAR,"
@@ -95,6 +96,7 @@ class StudySegment:
 
     def __check_segname(self):
         """Checks to see if segment is already in DB"""
+
         segs = db.query(
             f'select seg_name from {self.network_type}.user_segments')
 
@@ -151,6 +153,12 @@ class StudySegment:
                 where seg_name = '{self.segment_name}'
             """
         )
+
+    def __generate_proximate_islands(self):
+        """
+        Finds islands proximate to study segment and adds them to the user_islands table
+        in the DB
+        """
 
     def __generate_proximate_blobs(self):
         """
