@@ -4,21 +4,23 @@ from pg_data_etl import Database
 db = Database.from_config("lts", "localhost")
 
 
-generate_islands(db, "sidewalk.ped_network", "sw", "sidewalk")
+generate_islands(db, "sidewalk.ped_network", "objectid", "sw", "sidewalk")
 generate_islands(
     db,
     "lts.lts_stress_below_2",
+    "dvrpc_id",
     "lts_1",
     "lts",
 )  # generates islands composed of lts 2, 3, and 4 segments
 generate_islands(
     db,
     "lts.lts_stress_below_3",
+    "dvrpc_id",
     "lts_2",
     "lts",
 )  # generates islands composed of lts 3, 4 segments
 generate_islands(
-    db, "lts.lts_stress_below_4", "lts_3", "lts"
+    db, "lts.lts_stress_below_4", "dvrpc_id", "lts_3", "lts"
 )  # generates islands only of lts 4 segments
 
 gapslist = [1, 2, 3]
