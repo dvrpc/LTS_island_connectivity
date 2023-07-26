@@ -86,6 +86,16 @@ class StudySegment:
             """
             db.execute(query)
 
+    def __check_segname(self):
+        """Checks to see if segment is already in DB"""
+        segs = db.query(
+            f'select seg_name from {self.network_type}.user_segments')
+
+        # flattens list returned from db.query
+        flat_segs = [item for sublist in segs for item in sublist]
+
+        return flat_segs
+
     def __create_study_segment(self):
         """
         Creates a study segment based on uids.
@@ -107,12 +117,18 @@ class StudySegment:
 
         self.segment_ids = list(self.segment_ids)
 
-        db.execute(
-            f"""
-            INSERT INTO {self.network_type}.user_segments (id, username, seg_ids, seg_name, geom)
-            VALUES (DEFAULT, %s, %s, %s, %s)
-            """, (self.username, self.segment_ids, self.segment_name, gaps)
-        )
+        db_segments = self.__check_segname()
+
+        if self.segment_name in db_segments:
+            raise ValueError("Value must be unique")
+        else:
+            db.execute(
+                f"""
+                INSERT INTO {self.network_type}.user_segments 
+                (id, username, seg_ids, seg_name, geom)
+                VALUES (DEFAULT, %s, %s, %s, %s)
+                """, (self.username, self.segment_ids, self.segment_name, gaps)
+            )
 
     def __buffer_study_segment(self, distance: int = 30):
         """
@@ -349,7 +365,6 @@ class StudySegment:
         db.execute(q1)
 
 
-# a = BikeSegment(name, dvrpc_ids)
 a = StudySegment("sidewalk", (20, 21), name, "mmorley")
 
 b = StudySegment("lts", (540277, 540278, 540280, 540279,
