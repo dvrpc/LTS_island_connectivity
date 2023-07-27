@@ -70,7 +70,8 @@ if __name__ == "__main__":
     import_data(
         """select * from demographics.deccen_2020_block db
             inner join demographics.census_blocks_2020 cb
-            on cb.geoid = db.geocode
+            on cb.geoid20 = db.geocode
+            where cb.dvrpc_reg = 'y'
             """,
         "censusblock2020_demographics",
     )
