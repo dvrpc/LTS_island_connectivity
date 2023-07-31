@@ -34,8 +34,10 @@ class StudySegment:
         self.__buffer_study_segment()
         self.__generate_proximate_islands()
         self.__generate_proximate_blobs()
-        # self.has_isochrone = None
-        # self.__decide_scope()
+        self.has_isochrone = None
+        self.miles = self.__generate_mileage()
+        self.__decide_scope()
+
         # self.__handle_parking_lots()
 
         # self.total_pop = self.pull_stat(
@@ -283,9 +285,18 @@ class StudySegment:
                    """
         )
 
+    def __generate_mileage(self):
+        """Returns the mileage of the segment"""
+        q = db.query_as_singleton(
+            f"select size_miles from {self.network_type}.user_islands")
+        return q
+
     def __decide_scope(self, mileage: int = 1000):
         """
         Decides if isochrone should be created or not based on mileage of connected islands
+        Philly (including norristown area) is 4.7k miles
+        Trenton area is 798
+        Upper darby is 645
         """
         if self.miles > mileage:
             self.__create_isochrone()
