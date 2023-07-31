@@ -25,10 +25,7 @@ class StudySegment:
         self.segment_ids = segment_ids
         self.segment_name = segment_name
         self.username = username
-        if self.network_type == "lts":
-            self.highest_comfort_level = highest_comfort_level
-        elif self.network_type == "sidewalk":
-            self.highest_comfort_level = ""
+        self.ids, self.gaps_table, self.ls_table, self.highest_comfort_level = self.__characterize_segment()
         self.__setup_study_segment_tables()
         self.__create_study_segment()
         self.__buffer_study_segment()
@@ -36,6 +33,7 @@ class StudySegment:
         self.__generate_proximate_blobs()
         self.has_isochrone = None
         self.miles = self.__generate_mileage()
+        print(self.miles)
         self.__decide_scope()
 
         # self.__handle_parking_lots()
@@ -110,6 +108,24 @@ class StudySegment:
 
         return flat_segs
 
+    def __characterize_segment(self):
+        """Returns the id column and the proper gaps table for the segment type"""
+
+        if self.network_type == "sidewalk":
+            gaps_table = f"{self.network_type}.ped_network_gaps"
+            ids = "objectid"
+            highest_comfort_level = ""
+            ls_table = gaps_table
+        elif self.network_type == "lts":
+            gaps_table = f"{self.network_type}.lts{self.highest_comfort_level}gaps"
+            ids = "dvrpc_id"
+            highest_comfort_level = self.highest_comfort_level
+            ls_table = f'lts_stress_below_{highest_comfort_level}'
+        else:
+            print("something went wrong, pick lts or sidewalk for self.network_type.")
+
+        return ids, gaps_table, ls_table, highest_comfort_level
+
     def __create_study_segment(self):
         """
         Creates a study segment based on uids.
@@ -117,17 +133,9 @@ class StudySegment:
         lts_gaps_table = the table with appropriate gaps for that island selection
         (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
         """
-        if self.network_type == "sidewalk":
-            gaps_table = f"{self.network_type}.ped_network_gaps"
-            ids = "objectid"
-        elif self.network_type == "lts":
-            gaps_table = f"{self.network_type}.lts{self.highest_comfort_level}gaps"
-            ids = "dvrpc_id"
-        else:
-            print("something went wrong, pick lts or sidewalk for self.network_type.")
 
         gaps = db.query_as_singleton(
-            f"select st_collect(geom) as geom from {gaps_table} where {ids} in {self.segment_ids}")
+            f"select st_collect(geom) as geom from {self.gaps_table} where {self.ids} in {self.segment_ids}")
 
         self.segment_ids = list(self.segment_ids)
 
@@ -244,28 +252,51 @@ class StudySegment:
         )
 
     def __low_stress_touching_study_buffer(self):
-        """Study segment does not exist in lts_stress_below segment, so grab any touching segments that do."""
+        """Grabs low stress areas touching study segment buffer"""
 
-        touching_segs = db.query_as_singleton(
+        if self.network_type == 'sidewalk':
+            ls_table = self.gaps_table
+        elif self.network_type == 'lts':
+            ls_table = f'lts.lts_stress_below_{self.highest_comfort_level}'
+
+        q = db.query_as_singleton(
             f"""
-        select array_agg(dvrpc_id)
-        from data_viz.study_segment_buffer a
-        inner join lts_stress_below_{self.highest_comfort_level} b
-        on st_intersects(a.geom, b.geom)
-        """
+                with a as (
+                select array_agg(b.{self.ids})
+                from {self.network_type}.user_buffers a
+                inner join {ls_table} b
+                on st_intersects(a.geom, b.geom)
+                inner join {self.network_type}.user_segments c
+                on a.id = c.id 
+                where c.seg_name = '{self.segment_name}')
+            """
         )
 
-        return touching_segs
+        return q
 
     def __create_isochrone(self, travel_time: int = 15):
         """
         Creates isochrone based on study_segment
         """
-        ls_touching_segment = self.__low_stress_touching_study_buffer()
-        ls_touching_segment = tuple(ls_touching_segment)
+
+        if self.network_type == 'sidewalk':
+            ls_table = self.gaps_table
+        elif self.network_type == 'lts':
+            ls_table = f'lts.lts_stress_below_{self.highest_comfort_level}'
+        # ls_touching_segment = self.__low_stress_touching_study_buffer()
+        # ls_touching_segment = tuple(ls_touching_segment)
+        # print(ls_touching_segment)
 
         db.execute(
             f"""
+            with a as (
+            select array_agg(b.{self.ids})
+            from {self.network_type}.user_buffers a
+            inner join {ls_table} b
+            on st_intersects(a.geom, b.geom)
+            inner join {self.network_type}.user_segments c
+            on a.id = c.id 
+            where c.seg_name = '{self.segment_name}')
         drop materialized view if exists data_viz.isochrone;
         create materialized view data_viz.isochrone as
          with nodes as (
@@ -294,9 +325,6 @@ class StudySegment:
     def __decide_scope(self, mileage: int = 1000):
         """
         Decides if isochrone should be created or not based on mileage of connected islands
-        Philly (including norristown area) is 4.7k miles
-        Trenton area is 798
-        Upper darby is 645
         """
         if self.miles > mileage:
             self.__create_isochrone()
@@ -418,5 +446,5 @@ class StudySegment:
 
 a = StudySegment("sidewalk", (20, 21), name, "mmorley")
 
-b = StudySegment("lts", (540277, 540278, 540280, 540279,
-                         540276, 540275, 510870, 510869), name, "mmorley")
+b = StudySegment("lts", (405416, 405415, 401462, 401461, 401463, 401464, 401465, 401466, 448494, 448493
+                         ), name, "mmorley")
