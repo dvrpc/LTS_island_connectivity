@@ -33,7 +33,7 @@ class StudySegment:
         self.__create_study_segment()
         self.__buffer_study_segment()
         self.__generate_proximate_islands()
-        # self.miles = self.__generate_proximate_blobs()
+        self.__generate_proximate_blobs()
         # self.has_isochrone = None
         # self.__decide_scope()
         # self.__handle_parking_lots()
@@ -169,12 +169,12 @@ class StudySegment:
             f"""
                 alter table {self.network_type}.user_islands
                 add column if not exists island_uids INTEGER[],
-                add column if not exists size_miles float,
-                drop column if exists geom;
+                add column if not exists size_miles float;
                 insert into {self.network_type}.user_islands
                     select
                         a.id,
                         a.username,
+                        st_collectionextract(st_collect(b.geom)) as geom,
                         array_agg(b.uid) as island_uids,
                         sum(b.size_miles)
                     from {self.network_type}.user_buffers a
@@ -188,24 +188,23 @@ class StudySegment:
 
     def __generate_proximate_blobs(self):
         """
-        Evaluates which islands touch the study segment.
-        Returns total mileage of low-stress islands connected by new study_segment.
+        Creates 'blobs' around each island collection. 
+        Note that this query also unions the islands with the study segment buffer.
 
         """
+
         db.execute(
-            f"""drop table if exists blobs CASCADE;
-                create table blobs as
-                select st_concavehull(a.geom, .85) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count
-                    from data_viz.lts_{self.highest_comfort_level} a
-                    inner join data_viz.study_segment_buffer b
-                    on st_intersects(a.geom,b.geom)
-                    where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
-                create or replace view data_viz.blobs_union as
-                    select 1 as uid, st_union(st_union(a.geom, b.geom)) as geom from public.blobs a, data_viz.study_segment_buffer b
-                    """,
+            f"""
+                insert into {self.network_type}.user_blobs
+                select a.id, a.username, st_union(st_concavehull(a.geom, .85), c.geom) as geom
+                from {self.network_type}.user_islands a
+                inner join {self.network_type}.user_segments b
+                on a.id = b.id
+                inner join {self.network_type}.user_buffers c
+                on a.id = c.id
+                where b.seg_name = '{self.segment_name}'
+            """
         )
-        mileage_q = """select sum(size_miles) from blobs"""
-        return round(db.query_as_singleton(mileage_q))
 
     def __handle_parking_lots(self, join_table: str = "blobs_union"):
         """
