@@ -25,7 +25,10 @@ class StudySegment:
         self.segment_ids = segment_ids
         self.segment_name = segment_name
         self.username = username
-        self.highest_comfort_level = highest_comfort_level
+        if self.network_type == "lts":
+            self.highest_comfort_level = highest_comfort_level
+        elif self.network_type == "sidewalk":
+            self.highest_comfort_level = ""
         self.__setup_study_segment_tables()
         self.__create_study_segment()
         self.__buffer_study_segment()
@@ -133,7 +136,7 @@ class StudySegment:
         else:
             db.execute(
                 f"""
-                INSERT INTO {self.network_type}.user_segments 
+                INSERT INTO {self.network_type}.user_segments
                 (id, username, seg_ids, seg_name, geom)
                 VALUES (DEFAULT, %s, %s, %s, %s)
                 """, (self.username, self.segment_ids, self.segment_name, gaps)
@@ -141,14 +144,14 @@ class StudySegment:
 
     def __buffer_study_segment(self, distance: int = 30):
         """
-        Creates a buffer around the study segment. 
+        Creates a buffer around the study segment.
         Default for distance is 30m (100 ft) assuming your data is using meters
         """
 
         db.execute(
             f"""
                 insert into {self.network_type}.user_buffers
-                select id, username, st_buffer(geom, {distance}) as geom 
+                select id, username, st_buffer(geom, {distance}) as geom
                 from {self.network_type}.user_segments
                 where seg_name = '{self.segment_name}'
             """
@@ -156,25 +159,48 @@ class StudySegment:
 
     def __generate_proximate_islands(self):
         """
-        Finds islands proximate to study segment and adds them to the user_islands table
-        in the DB
+        Finds islands proximate to study segment buffer and adds them to the
+        user_islands table in the DB. each uid in islands_uids is one island, not the
+        ids of the underlying segments.
+        those ids are in the actual islands table in the id_agg column.
         """
+
+        db.execute(
+            f"""
+                alter table {self.network_type}.user_islands
+                add column if not exists island_uids INTEGER[],
+                add column if not exists size_miles float,
+                drop column if exists geom;
+                insert into {self.network_type}.user_islands
+                    select
+                        a.id,
+                        a.username,
+                        array_agg(b.uid) as island_uids,
+                        sum(b.size_miles)
+                    from {self.network_type}.user_buffers a
+                    inner join {self.network_type}.{self.network_type}{self.highest_comfort_level}_islands b
+                    on st_intersects(a.geom,b.geom)
+                    inner join {self.network_type}.user_segments c
+                    on a.id = c.id
+                    where c.seg_name = '{self.segment_name}'
+                    group by a.id
+            """)
 
     def __generate_proximate_blobs(self):
         """
-        Evaluates which islands touch the study segment. 
+        Evaluates which islands touch the study segment.
         Returns total mileage of low-stress islands connected by new study_segment.
 
         """
         db.execute(
             f"""drop table if exists blobs CASCADE;
                 create table blobs as
-                select st_concavehull(a.geom, .85) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count 
-                    from data_viz.lts_{self.highest_comfort_level} a 
+                select st_concavehull(a.geom, .85) as geom, a.uid, a.size_miles, a.rgba,a.muni_names, a.muni_count
+                    from data_viz.lts_{self.highest_comfort_level} a
                     inner join data_viz.study_segment_buffer b
                     on st_intersects(a.geom,b.geom)
                     where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
-                create or replace view data_viz.blobs_union as 
+                create or replace view data_viz.blobs_union as
                     select 1 as uid, st_union(st_union(a.geom, b.geom)) as geom from public.blobs a, data_viz.study_segment_buffer b
                     """,
         )
@@ -196,14 +222,14 @@ class StudySegment:
 
         db.execute(
             f"""
-        create or replace view data_viz.proximate_lu as 
+        create or replace view data_viz.proximate_lu as
             select a.uid, a.geom from landuse_selection a
                 inner join data_viz.study_segment_buffer b
                 on st_intersects (a.geom, b.geom);
         create or replace view data_viz.proximate_lu_and_touching as
             select 1 as uid, st_union(st_union(a.geom), st_union(b.geom)) as geom
                 from data_viz.proximate_lu a
-                inner join landuse_selection b 
+                inner join landuse_selection b
                 on st_touches(a.geom, b.geom)
             where b.lu15subn like 'Parking%'
                 or b.lu15subn like 'Institutional%'
@@ -222,7 +248,7 @@ class StudySegment:
         touching_segs = db.query_as_singleton(
             f"""
         select array_agg(dvrpc_id)
-        from data_viz.study_segment_buffer a 
+        from data_viz.study_segment_buffer a
         inner join lts_stress_below_{self.highest_comfort_level} b
         on st_intersects(a.geom, b.geom)
         """
@@ -240,20 +266,20 @@ class StudySegment:
         db.execute(
             f"""
         drop materialized view if exists data_viz.isochrone;
-        create materialized view data_viz.isochrone as 
+        create materialized view data_viz.isochrone as
          with nodes as (
          SELECT *
           FROM pgr_drivingDistance(
             'SELECT dvrpc_id as id, source, target, traveltime_min as cost FROM lts_stress_below_3',
             array(select "source" from lts3nodes a
                  inner join lts_stress_below_3 b
-                 on a.id = b."source" 
-                 where b.dvrpc_id in {ls_touching_segment}), 
+                 on a.id = b."source"
+                 where b.dvrpc_id in {ls_touching_segment}),
              15, false) as di
          JOIN lts3nodes pt
          ON di.node = pt.id)
          select 1 as uid, st_concavehull(st_union(st_centroid(b.geom)), .8) as geom from nodes a
-         inner join lts_stress_below_3 b 
+         inner join lts_stress_below_3 b
          on a.id = b."source"
                    """
         )
@@ -317,7 +343,7 @@ class StudySegment:
                 f"""
                     select a.{column}, st_length(a.shape)/1609 as miles from {table} a, {polygon} b
                         where st_intersects(a.shape, b.geom)
-                        group by a.{column}, st_length(a.shape) 
+                        group by a.{column}, st_length(a.shape)
                     """
             )
             df_dict = df.to_dict("records")
@@ -329,7 +355,7 @@ class StudySegment:
         db.execute(
             f"""create or replace view data_viz.accessed_islands as
             select 1 as uid, st_union(a.geom) as geom
-            from data_viz.lts_{self.highest_comfort_level} a 
+            from data_viz.lts_{self.highest_comfort_level} a
             inner join data_viz.study_segment_buffer b
             on st_intersects(a.geom,b.geom)
             where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
@@ -349,8 +375,8 @@ class StudySegment:
 
         """
         db.execute(
-            f"""create or replace view data_viz.geo_export_{export_table} as 
-            select {columns}, shape from {input_table} a 
+            f"""create or replace view data_viz.geo_export_{export_table} as
+            select {columns}, shape from {input_table} a
             inner join {overlap_table} b on st_intersects(a.shape, b.geom)"""
         )
         return "geometry exported to views, ready to use"
@@ -383,4 +409,4 @@ class StudySegment:
 a = StudySegment("sidewalk", (20, 21), name, "mmorley")
 
 b = StudySegment("lts", (540277, 540278, 540280, 540279,
-                 540276, 540275, 510870, 510869), name, "mmorley")
+                         540276, 540275, 510870, 510869), name, "mmorley")
