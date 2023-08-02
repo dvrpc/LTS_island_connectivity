@@ -145,8 +145,14 @@ class StudySegment:
         (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
         """
 
-        gaps = db.query_as_singleton(
-            f"select st_collect(geom) as geom from {self.gaps_table} where {self.ids} in {self.segment_ids}")
+        if type(self.segment_ids) == int:
+            gaps = db.query_as_singleton(
+                f"select geom from {self.gaps_table} where {self.ids} = {self.segment_ids}")
+            # make the int (single segment) into a one value tuple
+            self.segment_ids = (self.segment_ids,)
+        elif type(self.segment_ids) == tuple:
+            gaps = db.query_as_singleton(
+                f"select st_collect(geom) as geom from {self.gaps_table} where {self.ids} in {self.segment_ids}")
 
         self.segment_ids = list(self.segment_ids)
 
@@ -453,7 +459,7 @@ class StudySegment:
         db.execute(q1)
 
 
-a = StudySegment("sidewalk", (206363, 206366, 215997), name, "mmorley")
+a = StudySegment("sidewalk", (206363), name, "mmorley")
 
 b = StudySegment("lts", (405416, 405415, 401462, 401461, 401463, 401464, 401465, 401466, 448494, 448493
                          ), name, "mmorley")
