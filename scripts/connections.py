@@ -42,7 +42,7 @@ class StudySegment:
         print(self.miles)
         self.__decide_scope()
 
-        # self.__handle_parking_lots()
+        self.__handle_parking_lots()
 
         # self.total_pop = self.pull_stat(
         #     "totpop2020", "censusblock2020_demographics", "polygon"
@@ -267,29 +267,6 @@ class StudySegment:
             select 1 as uid, st_union(a.geom, b.geom) as geom from data_viz.proximate_lu_and_touching a, data_viz.{join_table} b;
         """
         )
-
-    def __low_stress_touching_study_buffer(self):
-        """Grabs low stress areas touching study segment buffer"""
-
-        if self.network_type == 'sidewalk':
-            ls_table = self.gaps_table
-        elif self.network_type == 'lts':
-            ls_table = f'lts.lts_stress_below_{self.highest_comfort_level}'
-
-        q = db.query_as_singleton(
-            f"""
-                with a as (
-                select array_agg(b.{self.ids})
-                from {self.network_type}.user_buffers a
-                inner join {ls_table} b
-                on st_intersects(a.geom, b.geom)
-                inner join {self.network_type}.user_segments c
-                on a.id = c.id 
-                where c.seg_name = '{self.segment_name}')
-            """
-        )
-
-        return q
 
     def __create_isochrone(self, travel_time: int = 15):
         """
