@@ -21,11 +21,17 @@ class StudySegment:
         username: str,
         highest_comfort_level: int = 2,
     ) -> None:
+        self.highest_comfort_level = highest_comfort_level
         self.network_type = network_type
         self.segment_ids = segment_ids
         self.segment_name = segment_name
         self.username = username
-        self.ids, self.gaps_table, self.ls_table, self.highest_comfort_level = self.__characterize_segment()
+        segment_tablenames = self.__characterize_segment()
+        self.ids = segment_tablenames[0]
+        self.gaps_table = segment_tablenames[1]
+        self.ls_table = segment_tablenames[2]
+        self.highest_comfort_level = segment_tablenames[3]
+        self.nodes_table = segment_tablenames[4]
         self.__setup_study_segment_tables()
         self.__create_study_segment()
         self.__buffer_study_segment()
@@ -78,7 +84,11 @@ class StudySegment:
         # self.convert_wkt_to_geom()
 
     def __setup_study_segment_tables(self):
-        for value in ["user_segments", "user_buffers", "user_islands", "user_blobs"]:
+        for value in ["user_segments",
+                      "user_buffers",
+                      "user_islands",
+                      "user_blobs",
+                      "user_isochrones"]:
             if value == 'user_segments':
                 seg_ids = "seg_ids INTEGER[],"
                 seg_name = "seg_name VARCHAR,"
@@ -110,21 +120,22 @@ class StudySegment:
 
     def __characterize_segment(self):
         """Returns the id column and the proper gaps table for the segment type"""
-
         if self.network_type == "sidewalk":
             gaps_table = f"{self.network_type}.ped_network_gaps"
             ids = "objectid"
             highest_comfort_level = ""
-            ls_table = gaps_table
+            ls_table = f"{self.network_type}.ped_network"
+            nodes_table = f"{self.network_type}nodes"
         elif self.network_type == "lts":
             gaps_table = f"{self.network_type}.lts{self.highest_comfort_level}gaps"
             ids = "dvrpc_id"
             highest_comfort_level = self.highest_comfort_level
-            ls_table = f'lts_stress_below_{highest_comfort_level}'
+            ls_table = f'{self.network_type}.lts_stress_below_{highest_comfort_level}'
+            nodes_table = f"{self.network_type}{self.highest_comfort_level + 1}nodes"
         else:
             print("something went wrong, pick lts or sidewalk for self.network_type.")
 
-        return ids, gaps_table, ls_table, highest_comfort_level
+        return [ids, gaps_table, ls_table, highest_comfort_level, nodes_table]
 
     def __create_study_segment(self):
         """
@@ -279,47 +290,45 @@ class StudySegment:
         Creates isochrone based on study_segment
         """
 
-        if self.network_type == 'sidewalk':
-            ls_table = self.gaps_table
-        elif self.network_type == 'lts':
-            ls_table = f'lts.lts_stress_below_{self.highest_comfort_level}'
-        # ls_touching_segment = self.__low_stress_touching_study_buffer()
-        # ls_touching_segment = tuple(ls_touching_segment)
-        # print(ls_touching_segment)
-
         db.execute(
             f"""
-            with a as (
-            select array_agg(b.{self.ids})
-            from {self.network_type}.user_buffers a
-            inner join {ls_table} b
-            on st_intersects(a.geom, b.geom)
-            inner join {self.network_type}.user_segments c
-            on a.id = c.id 
-            where c.seg_name = '{self.segment_name}')
-        drop materialized view if exists data_viz.isochrone;
-        create materialized view data_viz.isochrone as
-         with nodes as (
-         SELECT *
-          FROM pgr_drivingDistance(
-            'SELECT dvrpc_id as id, source, target, traveltime_min as cost FROM lts_stress_below_3',
-            array(select "source" from lts3nodes a
-                 inner join lts_stress_below_3 b
-                 on a.id = b."source"
-                 where b.dvrpc_id in {ls_touching_segment}),
-             15, false) as di
-         JOIN lts3nodes pt
-         ON di.node = pt.id)
-         select 1 as uid, st_concavehull(st_union(st_centroid(b.geom)), .8) as geom from nodes a
-         inner join lts_stress_below_3 b
-         on a.id = b."source"
-                   """
+            insert into {self.network_type}.user_isochrones
+            WITH arrays AS (
+                select a.id as id, --id of user segment, tied to blobs, buffer, etc
+                a.username,
+                a.seg_name,
+                array_agg(c.{self.ids}) as ids --ids in low stress table
+                FROM {self.network_type}.user_segments a
+                INNER JOIN {self.network_type}.user_buffers b ON a.id = b.id
+                INNER JOIN {self.ls_table} c ON st_intersects(b.geom, c.geom)
+                WHERE a.seg_name = '{self.segment_name}'
+                group by a.id
+            ),
+            nodes AS (
+                SELECT *
+                FROM pgr_drivingDistance(
+                    'SELECT {self.ids} as id, source, target, traveltime_min as cost FROM {self.ls_table}', -- example: ls_stress_below_3
+                    (SELECT array_agg("source") FROM {self.network_type}.{self.nodes_table} a
+                     INNER JOIN {self.ls_table} b ON a.id = b."source"
+                     WHERE b.{self.ids}= ANY((SELECT ids FROM arrays)::integer[])), -- Using ANY with integer array
+                    {travel_time}, false
+                ) AS di
+                JOIN {self.network_type}.{self.nodes_table} pt ON di.node = pt.id
+            )
+            SELECT (select id from arrays) as id, (select username from arrays), st_concavehull(st_union(st_centroid(b.geom)), .8) AS geom
+            FROM nodes a
+            INNER JOIN {self.ls_table} b ON a.id = b."source"
+            WHERE (select seg_name from arrays) = '{self.segment_name}';
+            """
         )
 
     def __generate_mileage(self):
         """Returns the mileage of the segment"""
         q = db.query_as_singleton(
-            f"select size_miles from {self.network_type}.user_islands")
+            f"""select size_miles from {self.network_type}.user_islands a
+                inner join {self.network_type}.user_segments b
+                on a.id = b.id
+                where b.seg_name = '{self.segment_name}'""")
         return q
 
     def __decide_scope(self, mileage: int = 1000):
@@ -444,7 +453,7 @@ class StudySegment:
         db.execute(q1)
 
 
-a = StudySegment("sidewalk", (20, 21), name, "mmorley")
+a = StudySegment("sidewalk", (206363, 206366, 215997), name, "mmorley")
 
 b = StudySegment("lts", (405416, 405415, 401462, 401461, 401463, 401464, 401465, 401466, 448494, 448493
                          ), name, "mmorley")
