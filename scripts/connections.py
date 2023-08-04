@@ -41,7 +41,6 @@ class StudySegment:
         self.miles = self.__generate_mileage()
         print(self.miles)
         self.__decide_scope()
-
         self.__handle_parking_lots()
 
         # self.total_pop = self.pull_stat(
@@ -233,7 +232,7 @@ class StudySegment:
             """
         )
 
-    def __handle_parking_lots(self, join_table: str = "blobs_union"):
+    def __handle_parking_lots(self):
         """
         Grabs proximate parking lots and their associated land uses, returns all.
 
@@ -241,30 +240,52 @@ class StudySegment:
         island, but accessible from the segment via the parking lot.
         """
 
-        if self.has_isochrone == True:
-            join_table = "isochrone"
-        elif self.has_isochrone == False:
-            join_table = "blobs_union"
+        if self.has_isochrone is True:
+            join_table = f"{self.network_type}.user_isochrones"
+        elif self.has_isochrone is False:
+            join_table = f"{self.network_type}.user_blobs"
 
         db.execute(
             f"""
-        create or replace view data_viz.proximate_lu as
-            select a.uid, a.geom from landuse_selection a
-                inner join data_viz.study_segment_buffer b
-                on st_intersects (a.geom, b.geom);
-        create or replace view data_viz.proximate_lu_and_touching as
-            select 1 as uid, st_union(st_union(a.geom), st_union(b.geom)) as geom
-                from data_viz.proximate_lu a
-                inner join landuse_selection b
-                on st_touches(a.geom, b.geom)
-            where b.lu15subn like 'Parking%'
-                or b.lu15subn like 'Institutional%'
-                or b.lu15subn like 'Commercial%'
-                or b.lu15subn = 'Recreation: General'
-                or b.lu15subn = 'Transportation: Rail Right-of-Way'
-                or b.lu15subn = 'Transportation: Facility';
-        create or replace view data_viz.parkinglot_union_lts_islands as
-            select 1 as uid, st_union(a.geom, b.geom) as geom from data_viz.proximate_lu_and_touching a, data_viz.{join_table} b;
+            WITH proximate_lu AS (
+                SELECT a.geom, c.id, c.seg_name
+                FROM landuse_2015 a
+                INNER JOIN {self.network_type}.user_buffers b
+                ON ST_Intersects(a.geom, b.geom)
+                inner join {self.network_type}.user_segments c
+                on b.id = c.id
+                WHERE (c.seg_name = '{self.segment_name}')
+                AND (
+                    a.lu15subn LIKE 'Parking%'
+                    OR a.lu15subn LIKE 'Institutional%'
+                    OR a.lu15subn LIKE 'Commercial%'
+                    OR a.lu15subn = 'Recreation: General'
+                    OR a.lu15subn = 'Transportation: Rail Right-of-Way'
+                    OR a.lu15subn = 'Transportation: Facility')
+            ),
+            proximate_lu_and_touching AS (
+                SELECT a.id, a.seg_name, ST_Union(ST_Union(a.geom), ST_Union(b.geom)) as geom
+                FROM proximate_lu a
+                INNER JOIN landuse_2015 b
+                ON ST_Touches(a.geom, b.geom)
+                WHERE (a.seg_name = '{self.segment_name}')
+                AND (
+                    b.lu15subn LIKE 'Parking%'
+                    OR b.lu15subn LIKE 'Institutional%'
+                    OR b.lu15subn LIKE 'Commercial%'
+                    OR b.lu15subn = 'Recreation: General'
+                    OR b.lu15subn = 'Transportation: Rail Right-of-Way'
+                    OR b.lu15subn = 'Transportation: Facility')
+                GROUP BY a.id, a.seg_name
+            ),
+            parkinglot_union_lts_islands AS (
+                SELECT a.id, a.seg_name, ST_Union(a.geom, b.geom) as geom
+                FROM proximate_lu_and_touching a, {join_table} b
+            )
+            UPDATE {join_table}
+            SET geom = parkinglot_union_lts_islands.geom
+            FROM parkinglot_union_lts_islands
+            WHERE parkinglot_union_lts_islands.seg_name = '{self.segment_name}';
         """
         )
 
@@ -436,7 +457,7 @@ class StudySegment:
         db.execute(q1)
 
 
-a = StudySegment("sidewalk", (206363), name, "mmorley")
+# a = StudySegment("sidewalk", (206363), name, "mmorley")
 
-b = StudySegment("lts", (405416, 405415, 401462, 401461, 401463, 401464, 401465, 401466, 448494, 448493
-                         ), name, "mmorley")
+b = StudySegment("lts", (448494, 448493, 401465, 401466, 401463,
+                 401464, 401462, 401461, 405416, 405415), name, "mmorley")
