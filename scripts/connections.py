@@ -4,12 +4,7 @@ import json
 
 db = Database.from_config("lts", "localhost")
 
-# network_type = input("what is the network type?")
-# dvrpc_ids = input("what are the segment ids?")
-# dvrpc_ids = tuple(int(x) for x in dvrpc_ids.split(","))
 name = input("what is the segment name?")
-# username = input(
-#     "what is your first initial, last name? e.g., jane roberts = jroberts")
 
 
 class StudySegment:
@@ -79,7 +74,6 @@ class StudySegment:
             "point",
         )
         self.summarize_stats()
-        # self.convert_wkt_to_geom()
 
     def __setup_study_segment_tables(self):
         for value in ["user_segments",
@@ -454,14 +448,8 @@ class StudySegment:
             "ped_crashes",
         ]:
             df[f"{value}"] = df[f"{value}"].apply(json.dumps)
-        # col_to_move = df.pop("geom")
-        # df.insert(len(df.columns), "geom", col_to_move)
 
         db.import_dataframe(df, "summaries.all", {"if_exists": "append"})
-
-    def convert_wkt_to_geom(self):
-        q1 = """alter table summaries.all alter column geom type geometry"""
-        db.execute(q1)
 
 
 a = StudySegment("sidewalk", (206363), name, "mmorley")
