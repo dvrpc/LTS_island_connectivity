@@ -65,7 +65,12 @@ def make_bike_ped_crash_view():
     db.execute(
         """
         drop materialized view if exists bikepedcrashes;
-        CREATE MATERIALIZED VIEW bikepedcrashes as (select st_transform(a.geom,26918) as shape, count(*) filter (where isbycyclist = 'Y') as bike, count(*) filter (where isbycyclist is null) as ped from crash_newjersey a inner join nj_ped_crash b on a.casenumber = b.casenumber group by a.geom, a.casenumber);
+        CREATE MATERIALIZED VIEW bikepedcrashes as 
+            (select st_transform(a.geom,26918) as geom, 
+            count(*) filter (where isbycyclist = 'Y') as bike, count(*)
+            filter (where isbycyclist is null) as ped from crash_newjersey a 
+            inner join nj_ped_crash b 
+            on a.casenumber = b.casenumber group by a.geom, a.casenumber);
 
         """
     )
