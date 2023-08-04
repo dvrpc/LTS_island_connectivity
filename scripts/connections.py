@@ -33,7 +33,7 @@ class StudySegment:
         self.highest_comfort_level = segment_tablenames[3]
         self.nodes_table = segment_tablenames[4]
         self.__setup_study_segment_tables()
-        self.__create_study_segment()
+        self.study_segment_id = self.__create_study_segment()
         self.__buffer_study_segment()
         self.__generate_proximate_islands()
         self.__generate_proximate_blobs()
@@ -43,9 +43,8 @@ class StudySegment:
         self.__decide_scope()
         self.__handle_parking_lots()
 
-        # self.total_pop = self.pull_stat(
-        #     "totpop2020", "censusblock2020_demographics", "polygon"
-        # )
+        self.total_pop = self.pull_stat(
+            self.study_segment_id, "totpop2020", "censusblock2020_demographics", "polygon")
         # self.nonwhite = self.pull_stat(
         #     "nonwhite", "censusblock2020_demographics", "polygon"
         # )
@@ -167,6 +166,12 @@ class StudySegment:
                 VALUES (DEFAULT, %s, %s, %s, %s)
                 """, (self.username, self.segment_ids, self.segment_name, gaps)
             )
+
+        study_segment_id = db.query_as_singleton(f"""
+            select id from {self.network_type}.user_segments a
+            where a.seg_name = '{self.segment_name}'""")
+
+        return study_segment_id
 
     def __buffer_study_segment(self, distance: int = 30):
         """
@@ -347,33 +352,41 @@ class StudySegment:
 
     def pull_stat(
         self,
+        study_segment_id: int,
         column: str,
         table: str,
         geom_type: str,
-        polygon: str = "data_viz.blobs_union",
     ):
         """
         grabs the identified attribute (population, school, etc) within the study area blobs.
 
         :param str column: the column you want to pull data from in your database
         :param str table: the table you want to pull data from in your database
-        :param str geom_type: the type (point, line, or polygon) of your data
-        :param str polygon: the polygon that has what you're interested in. default is blobs_union, but could also be a buffer of road segment.
+        :param str geom_type: the type (point, line, or polygon) of your data, ie what is in the polygon shape.
+        :param str polygon: the polygon you want stats for.
 
         """
-        if self.has_isochrone == True and polygon == "data_viz.blobs_union":
-            polygon = "data_viz.isochrone"
-        elif self.has_isochrone == False and polygon != "data_viz.blobs_union":
-            polygon = polygon
+
+        if self.has_isochrone is True:
+            polygon = f"{self.network_type}.user_isochrones"
+        elif self.has_isochrone is False:
+            polygon = f"{self.network_type}.user_blobs"
+
+        # only report crashes on study segment- not in entire low-stress area around it
+        if table.endswith("crashes"):
+            polygon = f"{self.network_type}.user_buffers"
+        else:
+            pass
 
         geom_type = geom_type.lower()
 
         if geom_type == "polygon":
             q = f"""
                 with total as(
-                    select round(st_area(st_intersection(a.shape, b.geom)) / st_area(a.shape) * a.{column}) as {column}_in_blobs
+                    select round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * a.{column}) as {column}_in_blobs
                     from {table} a, {polygon} b
-                    where st_intersects (a.shape, b.geom))
+                    where (st_intersects (a.geom, b.geom))
+                    and (b.id = {self.study_segment_id}))
                 select round(sum({column}_in_blobs)) from total
         """
             sum_poly = db.query_as_singleton(q)
@@ -383,6 +396,7 @@ class StudySegment:
             df = db.df(
                 f"""select count(a.{column}), a.{column} from {table} a, {polygon} b
                     where st_intersects(a.shape, b.geom)
+                    and (b.id = {self.study_segment_id})
                     group by a.{column}"""
             )
             # zips up dataframe containing count by column attribute of point
@@ -395,6 +409,7 @@ class StudySegment:
                     select a.{column}, st_length(a.shape)/1609 as miles from {table} a, {polygon} b
                         where st_intersects(a.shape, b.geom)
                         group by a.{column}, st_length(a.shape)
+                        and (b.id = {self.study_segment_id})
                     """
             )
             df_dict = df.to_dict("records")
