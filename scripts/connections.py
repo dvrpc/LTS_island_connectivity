@@ -39,7 +39,6 @@ class StudySegment:
         self.__generate_proximate_blobs()
         self.has_isochrone = None
         self.miles = self.__generate_mileage()
-        print(self.miles)
         self.__decide_scope()
         self.__handle_parking_lots()
 
@@ -144,6 +143,8 @@ class StudySegment:
         (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
         """
 
+        print("creating study segment, please wait..")
+
         if type(self.segment_ids) == int:
             gaps = db.query_as_singleton(
                 f"select geom from {self.gaps_table} where {self.ids} = {self.segment_ids}")
@@ -197,6 +198,8 @@ class StudySegment:
         those ids are in the actual islands table in the id_agg column.
         """
 
+        print("generating proximate islands, please wait..")
+
         db.execute(
             f"""
                 alter table {self.network_type}.user_islands
@@ -245,6 +248,7 @@ class StudySegment:
         This helps avoid undercounting where essential services might not be on an
         island, but accessible from the segment via the parking lot.
         """
+        print("folding in proximate parking lots and associated lu's, please wait..")
 
         if self.has_isochrone is True:
             join_table = f"{self.network_type}.user_isochrones"
@@ -334,6 +338,8 @@ class StudySegment:
 
     def __generate_mileage(self):
         """Returns the mileage of the segment"""
+
+        print("calculating mileage of proximate islands, please wait..")
         q = db.query_as_singleton(
             f"""select size_miles from {self.network_type}.user_islands a
                 inner join {self.network_type}.user_segments b
@@ -346,6 +352,7 @@ class StudySegment:
         Decides if isochrone should be created or not based on mileage of connected islands
         """
         if self.miles > mileage:
+            print(f"mileage of nearby islands > {mileage}, creating isochrone")
             self.__create_isochrone()
             self.has_isochrone = True
         else:
@@ -367,6 +374,8 @@ class StudySegment:
         :param str polygon: the polygon you want stats for.
 
         """
+
+        print(f"pulling stat from {table} table, please wait..")
 
         if self.has_isochrone is True:
             polygon = f"{self.network_type}.user_isochrones"
@@ -436,7 +445,6 @@ class StudySegment:
         """
         attrs = vars(self)
         df = pd.json_normalize(json.loads(json.dumps(attrs, indent=2)))
-        print(df.columns)
         for value in [
             "circuit",
             "jobs",
@@ -456,7 +464,7 @@ class StudySegment:
         db.execute(q1)
 
 
-# a = StudySegment("sidewalk", (206363), name, "mmorley")
+a = StudySegment("sidewalk", (206363), name, "mmorley")
 
 b = StudySegment("lts", (420300, 420299, 421952, 421951, 421954, 421953, 421956, 421955, 421958, 421957, 421960, 421959, 420298, 420297,
-                 407200, 407199, 420296, 420295, 407206, 407205, 407201, 407202, 407204, 407203, 410109, 410110, 410112, 410111), name, "mmorley")
+                         407200, 407199, 420296, 420295, 407206, 407205, 407201, 407202, 407204, 407203, 410109, 410110, 410112, 410111), name, "mmorley")
