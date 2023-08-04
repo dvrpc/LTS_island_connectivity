@@ -67,20 +67,19 @@ class StudySegment:
         #     "data_viz.study_segment_buffer",
         #     "bike, ped",
         # )
-        # self.essential_services = self.pull_stat(
-        #     "type",
-        #     "eta_essentialservicespts",
-        #     "point",
-        #     "data_viz.parkinglot_union_lts_islands",
-        # )
-        # self.rail_stations = self.pull_stat(
-        #     "type",
-        #     "passengerrailstations",
-        #     "point",
-        #     "data_viz.parkinglot_union_lts_islands",
-        # )
-        # self.pull_islands()
-        # self.summarize_stats()
+        self.essential_services = self.pull_stat(
+            self.study_segment_id,
+            "type",
+            "essential_services",
+            "point",
+        )
+        self.rail_stations = self.pull_stat(
+            self.study_segment_id,
+            "type",
+            "passengerrailstations",
+            "point",
+        )
+        self.summarize_stats()
         # self.convert_wkt_to_geom()
 
     def __setup_study_segment_tables(self):
@@ -417,24 +416,6 @@ class StudySegment:
             df_dict = df.to_dict("records")
             return df_dict
 
-    def pull_islands(self):
-        """Pulls islands connecting to study segment, returns geojson for use in web viewer."""
-
-        db.execute(
-            f"""create or replace view data_viz.accessed_islands as
-            select 1 as uid, st_union(a.geom) as geom
-            from data_viz.lts_{self.highest_comfort_level} a
-            inner join data_viz.study_segment_buffer b
-            on st_intersects(a.geom,b.geom)
-            where geometrytype(st_convexhull(a.geom)) = 'POLYGON';
-            """
-        )
-        geojson = db.query_as_singleton(
-            """select st_asgeojson(geom) from data_viz.accessed_islands"""
-        )
-
-        return geojson
-
     def pull_geometry(
         self, input_table: str, export_table: str, overlap_table: str, columns: str
     ):
@@ -455,6 +436,7 @@ class StudySegment:
         """
         attrs = vars(self)
         df = pd.json_normalize(json.loads(json.dumps(attrs, indent=2)))
+        print(df.columns)
         for value in [
             "circuit",
             "jobs",
@@ -464,8 +446,8 @@ class StudySegment:
             "ped_crashes",
         ]:
             df[f"{value}"] = df[f"{value}"].apply(json.dumps)
-        col_to_move = df.pop("geom")
-        df.insert(len(df.columns), "geom", col_to_move)
+        # col_to_move = df.pop("geom")
+        # df.insert(len(df.columns), "geom", col_to_move)
 
         db.import_dataframe(df, "summaries.all", {"if_exists": "append"})
 
