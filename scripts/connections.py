@@ -46,19 +46,21 @@ class StudySegment:
         self.total_pop = self.pull_stat(
             self.study_segment_id, "totpop2020", "censusblock2020_demographics", "polygon")
         # self.nonwhite = self.pull_stat(
-        #     "nonwhite", "censusblock2020_demographics", "polygon"
+        #     self.study_segment_id, "nonwhite", "censusblock2020_demographics", "polygon"
         # )
-        # self.hisp_lat = self.pull_stat(
-        #     "hislat2020", "censusblock2020_demographics", "polygon"
-        # )
-        # self.circuit = self.pull_stat("circuit", "circuittrails", "line")
-        # self.jobs = self.pull_stat("coname", "nets", "point")
-        # self.bike_crashes = self.pull_stat(
-        #     "bike", "bikepedcrashes", "point", "data_viz.study_segment_buffer"
-        # )
-        # self.ped_crashes = self.pull_stat(
-        #     "ped", "bikepedcrashes", "point", "data_viz.study_segment_buffer"
-        # )
+        self.hisp_lat = self.pull_stat(
+            self.study_segment_id, "hislat2020", "censusblock2020_demographics", "polygon"
+        )
+        self.circuit = self.pull_stat(
+            self.study_segment_id, "circuit", "circuittrails", "line")
+        self.jobs = self.pull_stat(
+            self.study_segment_id, "coname", "nets_2015", "point")
+        self.bike_crashes = self.pull_stat(
+            self.study_segment_id, "bike", "bikepedcrashes", "point",
+        )
+        self.ped_crashes = self.pull_stat(
+            self.study_segment_id, "ped", "bikepedcrashes", "point",
+        )
         # self.crash_export = self.pull_geometry(
         #     "bikepedcrashes",
         #     "bikepedcrashes",
@@ -395,7 +397,7 @@ class StudySegment:
         if geom_type == "point":
             df = db.df(
                 f"""select count(a.{column}), a.{column} from {table} a, {polygon} b
-                    where st_intersects(a.shape, b.geom)
+                    where st_intersects(a.geom, b.geom)
                     and (b.id = {self.study_segment_id})
                     group by a.{column}"""
             )
@@ -406,10 +408,10 @@ class StudySegment:
         if geom_type == "line":
             df = db.df(
                 f"""
-                    select a.{column}, st_length(a.shape)/1609 as miles from {table} a, {polygon} b
-                        where st_intersects(a.shape, b.geom)
-                        group by a.{column}, st_length(a.shape)
+                    select a.{column}, st_length(a.geom)/1609 as miles from {table} a, {polygon} b
+                        where st_intersects(a.geom, b.geom)
                         and (b.id = {self.study_segment_id})
+                        group by a.{column}, st_length(a.geom)
                     """
             )
             df_dict = df.to_dict("records")
@@ -474,5 +476,5 @@ class StudySegment:
 
 # a = StudySegment("sidewalk", (206363), name, "mmorley")
 
-b = StudySegment("lts", (448494, 448493, 401465, 401466, 401463,
-                 401464, 401462, 401461, 405416, 405415), name, "mmorley")
+b = StudySegment("lts", (420300, 420299, 421952, 421951, 421954, 421953, 421956, 421955, 421958, 421957, 421960, 421959, 420298, 420297,
+                 407200, 407199, 420296, 420295, 407206, 407205, 407201, 407202, 407204, 407203, 410109, 410110, 410112, 410111), name, "mmorley")
