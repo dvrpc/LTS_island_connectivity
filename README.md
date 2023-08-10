@@ -11,7 +11,13 @@ pgRouting (for isochrone creation)
 
 ## Environment
 
-Use:
+You can create a virtual environment in the project directory with
+`python -m venv ve`
+
+Activate it with 
+`. ve/bin/activate` and then install the requirements. `pip install -r requirements.txt`
+
+If you prefer Conda, there is also an environment.yml.
 `conda env create environment.yml` 
 
 Activate the environment with:
@@ -19,16 +25,18 @@ Activate the environment with:
 
 ## Makefile
 
-Be sure you've created a Postgres database called "LTS", and that you have the above dependencies installed.
+Be sure you've created a Postgres database called "lts", and that you have the above dependencies installed.
 
 Run `Make all` to import all data and build the islands for this analysis. 
 
-Note that this only works behind the firewall. 
+Make all will enable postgis and pgrouting on the lts database that you created, and will load all data from the DVRPC postgres server and any other sources.
+
+Note that this only works behind the DVRPC firewall.
 
 If you want to move any of this data to a server, run the makefile behind the firewall, then make a PG_dump of the DB and pg_restore it on your server.
 
 ### Backups
-you can use the `make backup` command to make a backup of your database. To do so, you need a .env file with the following variables:
+you can use the `make backup` command to make a backup of your database. To do so, you need a .env file with the following variables. (or you can just handle the backup on your own)
 
 ```
 # location of pg_dump binary (find with the 'which pg_dump' command)
@@ -64,7 +72,7 @@ note you need to create the target db. go ahead and create postgis and pgrouting
 
 :white_check_mark: add clear button to webmap
 
-:black_square_button: modularize for sidewalks
+:white_check_mark: modularize for sidewalks
 
 :black_square_button: make API , hook to webmap
 
