@@ -5,6 +5,8 @@ import json
 db = Database.from_config("lts", "localhost")
 
 name = input("what is the segment name?")
+dvrpc_ids = input("what are the segment ids?")
+dvrpc_ids = tuple(int(x) for x in dvrpc_ids.split(","))
 
 
 class StudySegment:
@@ -240,7 +242,17 @@ class StudySegment:
         Grabs proximate parking lots and their associated land uses, returns all.
 
         This helps avoid undercounting where essential services might not be on an
-        island, but accessible from the segment via the parking lot.
+        island, but accessible from the segment via the parking lot and the parking
+        lot's adjacent land use. 
+
+        The first cte grabs proximate land uses to the join table (blobs or isochrone). 
+
+        The second cte grabs relevent land uses that touch those segments. 
+
+        Join table is updated with the geom of both plus the original join data.
+
+        Exterior ring query removes holes formed by unmatched LUs. 
+
         """
         print("folding in proximate parking lots and associated lu's, please wait..")
 
@@ -251,45 +263,45 @@ class StudySegment:
 
         db.execute(
             f"""
-            WITH proximate_lu AS (
-                SELECT a.geom, c.id, c.seg_name
-                FROM landuse_2015 a
-                INNER JOIN {self.network_type}.user_buffers b
-                ON ST_Intersects(a.geom, b.geom)
-                inner join {self.network_type}.user_segments c
-                on b.id = c.id
-                WHERE (c.seg_name = '{self.segment_name}')
-                AND (
-                    a.lu15subn LIKE 'Parking%'
-                    OR a.lu15subn LIKE 'Institutional%'
-                    OR a.lu15subn LIKE 'Commercial%'
-                    OR a.lu15subn = 'Recreation: General'
-                    OR a.lu15subn = 'Transportation: Rail Right-of-Way'
-                    OR a.lu15subn = 'Transportation: Facility')
-            ),
-            proximate_lu_and_touching AS (
-                SELECT a.id, a.seg_name, ST_Union(ST_Union(a.geom), ST_Union(b.geom)) as geom
+                WITH proximate_lu AS (
+                    SELECT ST_Union(a.geom) as geom, c.id, c.seg_name
+                    FROM landuse_2015 a
+                    INNER JOIN {join_table} b
+                    ON ST_Intersects(a.geom, b.geom)
+                    INNER JOIN {self.network_type}.user_segments c
+                    ON b.id = c.id
+                    WHERE c.seg_name = '{self.segment_name}'
+                    AND (
+                        a.lu15subn LIKE 'Parking%'
+                        OR a.lu15subn LIKE 'Institutional%'
+                        OR a.lu15subn LIKE 'Commercial%'
+                        OR a.lu15subn = 'Recreation: General'
+                        OR a.lu15subn = 'Transportation: Rail Right-of-Way'
+                        OR a.lu15subn = 'Transportation: Facility')
+                    GROUP BY c.id, c.seg_name
+                ),
+                proximate_lu_and_touching AS (
+                    SELECT a.id, a.seg_name, ST_Union(b.geom) as geom
+                    FROM proximate_lu a
+                    INNER JOIN landuse_2015 b
+                    ON ST_Touches(a.geom, b.geom)
+                    WHERE a.seg_name = '{self.segment_name}'
+                    AND (
+                        b.lu15subn LIKE 'Parking%'
+                        OR b.lu15subn LIKE 'Institutional%'
+                        OR b.lu15subn LIKE 'Commercial%'
+                        OR b.lu15subn = 'Recreation: General'
+                        OR b.lu15subn = 'Transportation: Rail Right-of-Way'
+                        OR b.lu15subn = 'Transportation: Facility')
+                    GROUP BY a.id, a.seg_name
+                )
+                UPDATE {join_table} AS b
+                SET geom = st_makepolygon(st_exteriorring(ST_Union(ST_Union(a.geom, c.geom), b.geom)))
                 FROM proximate_lu a
-                INNER JOIN landuse_2015 b
-                ON ST_Touches(a.geom, b.geom)
-                WHERE (a.seg_name = '{self.segment_name}')
-                AND (
-                    b.lu15subn LIKE 'Parking%'
-                    OR b.lu15subn LIKE 'Institutional%'
-                    OR b.lu15subn LIKE 'Commercial%'
-                    OR b.lu15subn = 'Recreation: General'
-                    OR b.lu15subn = 'Transportation: Rail Right-of-Way'
-                    OR b.lu15subn = 'Transportation: Facility')
-                GROUP BY a.id, a.seg_name
-            ),
-            parkinglot_union_lts_islands AS (
-                SELECT a.id, a.seg_name, ST_Union(a.geom, b.geom) as geom
-                FROM proximate_lu_and_touching a, {join_table} b
-            )
-            UPDATE {join_table}
-            SET geom = parkinglot_union_lts_islands.geom
-            FROM parkinglot_union_lts_islands
-            WHERE parkinglot_union_lts_islands.seg_name = '{self.segment_name}';
+                INNER JOIN proximate_lu_and_touching c
+                ON a.id = c.id
+                WHERE b.id = a.id;
+
         """
         )
 
@@ -323,7 +335,7 @@ class StudySegment:
                 ) AS di
                 JOIN {self.network_type}.{self.nodes_table} pt ON di.node = pt.id
             )
-            SELECT (select id from arrays) as id, (select username from arrays), st_concavehull(st_union(st_centroid(b.geom)), .8) AS geom
+            SELECT (select id from arrays) as id, (select username from arrays), st_concavehull(st_union(st_centroid(b.geom)), .85) AS geom
             FROM nodes a
             INNER JOIN {self.ls_table} b ON a.id = b."source"
             WHERE (select seg_name from arrays) = '{self.segment_name}';
@@ -452,7 +464,6 @@ class StudySegment:
         db.import_dataframe(df, "summaries.all", {"if_exists": "append"})
 
 
-a = StudySegment("sidewalk", (206363), name, "mmorley")
+# a = StudySegment("sidewalk", (206363), name, "mmorley")
 
-b = StudySegment("lts", (420300, 420299, 421952, 421951, 421954, 421953, 421956, 421955, 421958, 421957, 421960, 421959, 420298, 420297,
-                         407200, 407199, 420296, 420295, 407206, 407205, 407201, 407202, 407204, 407203, 410109, 410110, 410112, 410111), name, "mmorley")
+b = StudySegment("lts", dvrpc_ids, name, "mmorley")
