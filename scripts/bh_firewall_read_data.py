@@ -79,7 +79,7 @@ def make_bike_ped_crash_view():
 if __name__ == "__main__":
     create_schemas(db)
     import_data(
-        "select *, gid as dvrpc_id from transportation.lts_network where typeno != '22' and typeno != '82'",
+        "select *, gid as dvrpc_id from transportation.lts_network",
         "lts.lts_full",
     )
     import_data(
