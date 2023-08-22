@@ -28,7 +28,7 @@ def create_schemas(db):
     CREATE SCHEMA if not exists sidewalk;
     DROP SCHEMA if exists lts CASCADE;
     CREATE SCHEMA if not exists lts;
-    DROP SCHEMA if exists connect_users_cascade;
+    DROP SCHEMA if exists connect_users cascade;
     CREATE SCHEMA if not exists connect_users;"""
     )
 
@@ -82,12 +82,10 @@ def setup_user_table():
     db.execute(
         """
         create table if not exists connect_users.users(
-                    uid INTEGER primary key,
+                    id SERIAL primary key,
                     username VARCHAR,
-                    full_name VARCHAR,
-                    email VARCHAR,
                     hashed_password VARCHAR,
-                    disabled bool
+                    is_active BOOL
                 );    
         """
     )
