@@ -82,6 +82,7 @@ def setup_user_table():
     db.execute(
         """
         create table if not exists connect_users.users(
+                    uid INTEGER primary key,
                     username VARCHAR,
                     full_name VARCHAR,
                     email VARCHAR,
