@@ -27,7 +27,9 @@ def create_schemas(db):
     DROP SCHEMA if exists sidewalk CASCADE;
     CREATE SCHEMA if not exists sidewalk;
     DROP SCHEMA if exists lts CASCADE;
-    CREATE SCHEMA if not exists lts;"""
+    CREATE SCHEMA if not exists lts;
+    DROP SCHEMA if exists connect_users_cascade;
+    CREATE SCHEMA if not exists connect_users;"""
     )
 
 
@@ -72,6 +74,20 @@ def make_bike_ped_crash_view():
             inner join nj_ped_crash b 
             on a.casenumber = b.casenumber group by a.geom, a.casenumber);
 
+        """
+    )
+
+
+def setup_user_table():
+    db.execute(
+        """
+        create table if not exists connect_users.users(
+                    username VARCHAR,
+                    full_name VARCHAR,
+                    email VARCHAR,
+                    hashed_password VARCHAR,
+                    disabled bool
+                );    
         """
     )
 
