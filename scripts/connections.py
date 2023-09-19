@@ -52,12 +52,6 @@ class StudySegment:
         self.ped_crashes = self.pull_stat(
             self.study_segment_id, "ped", "bikepedcrashes", "point",
         )
-        # self.crash_export = self.pull_geometry(
-        #     "bikepedcrashes",
-        #     "bikepedcrashes",
-        #     "data_viz.study_segment_buffer",
-        #     "bike, ped",
-        # )
         self.essential_services = self.pull_stat(
             self.study_segment_id,
             "type",
@@ -157,7 +151,6 @@ class StudySegment:
         Finds islands proximate to study segment buffer and adds them to the
         user_islands table in the DB. each uid in islands_uids is one island, not the
         ids of the underlying segments.
-        those ids are in the actual islands table in the id_agg column.
         """
 
         print("generating proximate islands, please wait..")
@@ -172,7 +165,6 @@ class StudySegment:
                         a.id,
                         a.username,
                         st_collectionextract(st_collect(b.geom)) as geom,
-                        array_agg(b.uid) as island_uids,
                         sum(b.size_miles)
                     from {self.network_type}.user_buffers a
                     inner join {self.network_type}.{self.network_type}{self.highest_comfort_level}_islands b
@@ -396,20 +388,6 @@ class StudySegment:
             )
             df_dict = df.to_dict("records")
             return df_dict
-
-    def pull_geometry(
-        self, input_table: str, export_table: str, overlap_table: str, columns: str
-    ):
-        """
-        Creates a view of the needed geometry for later use by the API.
-
-        """
-        db.execute(
-            f"""create or replace view data_viz.geo_export_{export_table} as
-            select {columns}, shape from {input_table} a
-            inner join {overlap_table} b on st_intersects(a.shape, b.geom)"""
-        )
-        return "geometry exported to views, ready to use"
 
     def summarize_stats(self):
         """
