@@ -1,36 +1,31 @@
 from pg_data_etl import Database
 import pandas as pd
 import json
+from geoalchemy2 import WKTElement
+from sqlalchemy import create_engine, text
 
 db = Database.from_config("lts", "localhost")
 
 name = input("what is the segment name?")
-dvrpc_ids = input("what are the segment ids?")
-dvrpc_ids = tuple(int(x) for x in dvrpc_ids.split(","))
 
 
 class StudySegment:
     def __init__(
         self,
         network_type: str,
-        segment_ids: tuple,
+        segment_geometry: dict,
         segment_name: str,
         username: str,
         highest_comfort_level: int = 2,
     ) -> None:
         self.highest_comfort_level = highest_comfort_level
         self.network_type = network_type
-        self.segment_ids = segment_ids
+        self.segment_geometry = segment_geometry
         self.segment_name = segment_name
         self.username = username
-        segment_tablenames = self.__characterize_segment()
-        self.ids = segment_tablenames[0]
-        self.gaps_table = segment_tablenames[1]
-        self.ls_table = segment_tablenames[2]
-        self.highest_comfort_level = segment_tablenames[3]
-        self.nodes_table = segment_tablenames[4]
         self.__setup_study_segment_tables()
-        self.study_segment_id = self.__create_study_segment()
+        self.__create_study_segment(
+            self.segment_geometry, self.username, self.segment_name, self.network_type)
         self.__buffer_study_segment()
         self.__generate_proximate_islands()
         self.__generate_proximate_blobs()
@@ -84,17 +79,14 @@ class StudySegment:
                       "user_blobs",
                       "user_isochrones"]:
             if value == 'user_segments':
-                seg_ids = "seg_ids INTEGER[],"
                 seg_name = "seg_name VARCHAR,"
             else:
-                seg_ids = ""
                 seg_name = ""
 
             query = f"""
                 CREATE TABLE IF NOT EXISTS {self.network_type}.{value}(
                     id SERIAL PRIMARY KEY,
                     username VARCHAR,
-                    {seg_ids}
                     {seg_name}
                     geom GEOMETRY
                 );
@@ -112,64 +104,38 @@ class StudySegment:
 
         return flat_segs
 
-    def __characterize_segment(self):
-        """Returns the id column and the proper gaps table for the segment type"""
-        if self.network_type == "sidewalk":
-            gaps_table = f"{self.network_type}.ped_network_gaps"
-            ids = "objectid"
-            highest_comfort_level = ""
-            ls_table = f"{self.network_type}.ped_network"
-            nodes_table = f"{self.network_type}nodes"
-        elif self.network_type == "lts":
-            gaps_table = f"{self.network_type}.lts{self.highest_comfort_level}gaps"
-            ids = "dvrpc_id"
-            highest_comfort_level = self.highest_comfort_level
-            ls_table = f'{self.network_type}.lts_stress_below_{highest_comfort_level}'
-            nodes_table = f"{self.network_type}{self.highest_comfort_level + 1}nodes"
-        else:
-            print("something went wrong, pick lts or sidewalk for self.network_type.")
-
-        return [ids, gaps_table, ls_table, highest_comfort_level, nodes_table]
-
-    def __create_study_segment(self):
+    def __create_study_segment(self, geojson_dict: dict, username: str, segment_name: str, network_type: str):
         """
-        Creates a study segment based on uids.
+        Creates a study segment / study segments based on user's drawn geometry.
 
-        lts_gaps_table = the table with appropriate gaps for that island selection
-        (i.e. if you're using the lts_1_islands layer, you would input the lts1gaps table, which includes LTS 2,3,4 as gaps)
         """
+        engine = create_engine(db.uri)
+
+        features = geojson_dict.get('features', [])
+        for feature in features:
+            geometry = feature.get('geometry')
+            if geometry.get('type') == 'LineString':
+                coordinates = geometry.get('coordinates', [])
+
+                # Convert coordinates to WKT LineString format
+                coord_str = ", ".join([f"{x} {y}" for x, y in coordinates])
+                line_wkt = f"LINESTRING({coord_str})"
+
+                wkt_element = WKTElement(line_wkt, srid=4326)
+
+                table_name = f"{network_type}.user_segments"
+                query = f"""
+                INSERT INTO {table_name}
+                (id, username, seg_name, geom)
+                VALUES (DEFAULT, :username, :seg_name, ST_GeomFromText(:geom, 4326))
+                """
+
+                query = text(query)
+
+                engine.execute(query, username=username,
+                               seg_name=segment_name, geom=wkt_element.desc)
 
         print("creating study segment, please wait..")
-
-        if type(self.segment_ids) == int:
-            gaps = db.query_as_singleton(
-                f"select geom from {self.gaps_table} where {self.ids} = {self.segment_ids}")
-            # make the int (single segment) into a one value tuple
-            self.segment_ids = (self.segment_ids,)
-        elif type(self.segment_ids) == tuple:
-            gaps = db.query_as_singleton(
-                f"select st_collect(geom) as geom from {self.gaps_table} where {self.ids} in {self.segment_ids}")
-
-        self.segment_ids = list(self.segment_ids)
-
-        db_segments = self.__check_segname()
-
-        if self.segment_name in db_segments:
-            raise ValueError("Value must be unique")
-        else:
-            db.execute(
-                f"""
-                INSERT INTO {self.network_type}.user_segments
-                (id, username, seg_ids, seg_name, geom)
-                VALUES (DEFAULT, %s, %s, %s, %s)
-                """, (self.username, self.segment_ids, self.segment_name, gaps)
-            )
-
-        study_segment_id = db.query_as_singleton(f"""
-            select id from {self.network_type}.user_segments a
-            where a.seg_name = '{self.segment_name}'""")
-
-        return study_segment_id
 
     def __buffer_study_segment(self, distance: int = 30):
         """
@@ -465,5 +431,50 @@ class StudySegment:
 
 
 # a = StudySegment("sidewalk", (206363), name, "mmorley")
+vinest_dict = {
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "id": "dea5351759653de7db8339138732c5c0",
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+                "coordinates": [
+                  [
+                      -75.17926091685041,
+                      39.96003682853882
+                  ],
+                    [
+                      -75.15414917572895,
+                      39.95675149510123
+                  ],
+                    [
+                      -75.15136190393957,
+                      39.956570091724984
+                  ]
+                ],
+                "type": "LineString"
+            }
+        },
+        {
+            "id": "8cb6aa8c8b9818d90408c8f0e51f851f",
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+                "coordinates": [
+                  [
+                      -75.16294034690132,
+                      39.956103911383394
+                  ],
+                    [
+                      -75.1619411362597,
+                      39.96021563112811
+                  ]
+                ],
+                "type": "LineString"
+            }
+        }
+    ]
+}
 
-b = StudySegment("lts", dvrpc_ids, name, "mmorley")
+b = StudySegment("lts", vinest_dict, name, "mmorley")
