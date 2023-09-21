@@ -6,26 +6,25 @@ from sqlalchemy import create_engine, text
 
 db = Database.from_config("lts", "localhost")
 
-name = input("what is the segment name?")
-
 
 class StudySegment:
     def __init__(
         self,
         network_type: str,
-        segment_geometry: dict,
-        segment_name: str,
+        feature: dict,
         username: str,
         highest_comfort_level: int = 2,
     ) -> None:
         self.highest_comfort_level = highest_comfort_level
         self.network_type = network_type
-        self.segment_geometry = segment_geometry
-        self.segment_name = segment_name
+        self.feature = feature
+        self.geometry = feature['geometry']
+        self.properties = feature['properties']
+        self.segment_name = self.properties['name']
         self.username = username
         self.__setup_study_segment_tables()
-        self.__create_study_segment(
-            self.segment_geometry, self.username, self.segment_name, self.network_type)
+        self.study_segment_id = self.__create_study_segment(
+            self.geometry, self.username, self.network_type)
         self.__buffer_study_segment()
         self.__generate_proximate_islands()
         self.__generate_proximate_blobs()
@@ -98,38 +97,43 @@ class StudySegment:
 
         return flat_segs
 
-    def __create_study_segment(self, geojson_dict: dict, username: str, segment_name: str, network_type: str):
+    def __create_study_segment(self, geojson_dict: dict, username: str, network_type: str):
         """
         Creates a study segment / study segments based on user's drawn geometry.
 
         """
         engine = create_engine(db.uri)
 
-        features = geojson_dict.get('features', [])
-        for feature in features:
-            geometry = feature.get('geometry')
-            if geometry.get('type') == 'LineString':
-                coordinates = geometry.get('coordinates', [])
+        segment_name = feature.get('properties')['name']
+        print(segment_name)
+        if self.geometry.get('type') == 'LineString':
+            coordinates = self.geometry.get('coordinates', [])
 
-                # Convert coordinates to WKT LineString format
-                coord_str = ", ".join([f"{x} {y}" for x, y in coordinates])
-                line_wkt = f"LINESTRING({coord_str})"
+            # Convert coordinates to WKT LineString format
+            coord_str = ", ".join([f"{x} {y}" for x, y in coordinates])
+            line_wkt = f"LINESTRING({coord_str})"
 
-                wkt_element = WKTElement(line_wkt, srid=4326)
+            wkt_element = WKTElement(line_wkt, srid=4326)
 
-                table_name = f"{network_type}.user_segments"
-                query = f"""
-                INSERT INTO {table_name}
-                (id, username, seg_name, geom)
-                VALUES (DEFAULT, :username, :seg_name, ST_GeomFromText(:geom, 4326))
-                """
+            table_name = f"{network_type}.user_segments"
+            query = f"""
+            INSERT INTO {table_name}
+            (id, username, seg_name, geom)
+            VALUES (DEFAULT, :username, :seg_name, ST_Transform(ST_GeomFromText(:geom, 4326), 26918))
+            """
 
-                query = text(query)
+            query = text(query)
 
-                engine.execute(query, username=username,
-                               seg_name=segment_name, geom=wkt_element.desc)
+            engine.execute(query, username=username,
+                           seg_name=segment_name, geom=wkt_element.desc)
 
         print("creating study segment, please wait..")
+
+        study_segment_id = db.query_as_singleton(f"""
+            select id from {self.network_type}.user_segments a
+            where a.seg_name = '{self.segment_name}'""")
+
+        return study_segment_id
 
     def __buffer_study_segment(self, distance: int = 30):
         """
@@ -158,7 +162,6 @@ class StudySegment:
         db.execute(
             f"""
                 alter table {self.network_type}.user_islands
-                add column if not exists island_uids INTEGER[],
                 add column if not exists size_miles float;
                 insert into {self.network_type}.user_islands
                     select
@@ -410,49 +413,60 @@ class StudySegment:
 
 # a = StudySegment("sidewalk", (206363), name, "mmorley")
 vinest_dict = {
-    "type": "FeatureCollection",
     "features": [
         {
-            "id": "dea5351759653de7db8339138732c5c0",
-            "type": "Feature",
-            "properties": {},
             "geometry": {
                 "coordinates": [
-                  [
-                      -75.17926091685041,
-                      39.96003682853882
-                  ],
                     [
-                      -75.15414917572895,
-                      39.95675149510123
-                  ],
+                        -75.61461921412885,
+                        39.873849522955
+                    ],
                     [
-                      -75.15136190393957,
-                      39.956570091724984
-                  ]
+                        -75.61783538096157,
+                        39.87455474002729
+                    ],
+                    [
+                        -75.6291174900091,
+                        39.87361444898647
+                    ],
+                    [
+                        -75.63595822581108,
+                        39.87471145394656
+                    ]
                 ],
                 "type": "LineString"
-            }
+            },
+            "id": "7a6fb406bfd63a99f138e16147a6e867",
+            "properties": {
+                "name": "projecty3"
+            },
+            "type": "Feature"
         },
         {
-            "id": "8cb6aa8c8b9818d90408c8f0e51f851f",
-            "type": "Feature",
-            "properties": {},
             "geometry": {
                 "coordinates": [
-                  [
-                      -75.16294034690132,
-                      39.956103911383394
-                  ],
                     [
-                      -75.1619411362597,
-                      39.96021563112811
-                  ]
+                        -75.6310063498944,
+                        39.87232152775681
+                    ],
+                    [
+                        -75.62549292103867,
+                        39.879099298330914
+                    ]
                 ],
                 "type": "LineString"
-            }
+            },
+            "id": "48ecd4da562634b3b1558bee57220f32",
+            "properties": {
+                "name": "projecty4"
+            },
+            "type": "Feature"
         }
-    ]
+    ],
+    "type": "FeatureCollection"
 }
 
-b = StudySegment("lts", vinest_dict, name, "mmorley")
+
+for feature in vinest_dict['features']:
+    print(feature)
+    seg = StudySegment("lts", feature, "mmorley")
