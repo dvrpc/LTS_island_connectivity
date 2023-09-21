@@ -105,7 +105,13 @@ class StudySegment:
         engine = create_engine(db.uri)
 
         segment_name = feature.get('properties')['name']
-        print(segment_name)
+
+        db_segments = self.__check_segname()
+
+        if self.segment_name in db_segments:
+            raise ValueError(
+                "Project name was already used. Try another name.")
+
         if self.geometry.get('type') == 'LineString':
             coordinates = self.geometry.get('coordinates', [])
 
