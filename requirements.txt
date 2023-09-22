@@ -1,8 +1,8 @@
 geoalchemy2
 geopandas
-https://github.com/dvrpc/network-routing
+network-routing @ git+https://github.com/dvrpc/network-routing
 pandana
-git+https://github.com/mmorley0395/pg-data-etl
+pg-data-etl @ git+https://github.com/mmorley0395/pg-data-etl
 pip-chill
 psycopg2-binary
 python-dotenv
