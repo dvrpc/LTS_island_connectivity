@@ -1,9 +1,6 @@
 # LTS_island_connectivity
 
-New approach to LTS Network Connectivity
-
-Webmap for segment selection:
-[Link](https://dvrpc.github.io/LTS_island_connectivity/)
+A python module to analyze the connectivity benefit of bike and pedestrian projects in terms of number of people, jobs, etc... connected.
 
 ## Depenedencies
 PostGIS
