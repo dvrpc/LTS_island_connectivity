@@ -2,7 +2,7 @@
 read_data.py
 ------------------
 This script reads data from DVRPC's postgres db
-and inserts it into a Postgres database.
+and inserts it into your local Postgres database.
 
 This script won't work outside of the DVRPC firewall; 
 for server outside of firewall, a sql dump file will have to 
@@ -10,15 +10,15 @@ be used to populate your db with a copy of what is here.
 
 """
 
-from pg_data_etl import Database
 import os
+from settings import URI, HOST, USER, PASSWORD, DB_NAME, GIS_HOST, GIS_USER, GIS_PASSWORD, GIS_DB_NAME, GIS_PORT
+from sqlalchemy import create_engine
 
-db = Database.from_config("lts", "localhost")
-gis_db = Database.from_config("gis", "gis")
+engine = create_engine(f'{URI}')
 
 
 def create_schemas(db):
-    db.execute(
+    engine.execute(
         """
     CREATE extension if not exists postgis;
     CREATE extension if not exists pgrouting;
@@ -45,7 +45,7 @@ def import_data(
     print(f"initiating import of {full_layer_tablename}, please wait...")
 
     os.system(
-        f"""ogr2ogr -lco GEOMETRY_NAME=geom -sql "{sql_query}" -explodecollections -f "PostgreSQL" -overwrite PG:"host={db.connection_params['host']} user={db.connection_params['un']} dbname={db.connection_params['db_name']} password={db.connection_params['pw']}" -t_srs "EPSG:26918" -f "PostgreSQL" PG:"host={gis_db.connection_params['host']} port={gis_db.connection_params['port']} dbname={gis_db.connection_params['db_name']} user={gis_db.connection_params['un']} password={gis_db.connection_params['pw']}" -nln {full_layer_tablename}"""
+        f"""ogr2ogr -lco GEOMETRY_NAME=geom -sql "{sql_query}" -explodecollections -f "PostgreSQL" -overwrite PG:"host={HOST} user={USER} dbname={DB_NAME} password={PASSWORD}" -t_srs "EPSG:26918" -f "PostgreSQL" PG:"host={GIS_HOST} port={GIS_PORT} dbname={GIS_DB_NAME} user={GIS_USER} password={GIS_PASSWORD}" -nln {full_layer_tablename}"""
     )
 
 
@@ -54,7 +54,7 @@ def make_low_stress_lts(lts_level: int = 3):
     all segments below specified lts_level (i.e. if write 'lts_level=3', it will create select LTS 1 and 2 as a new table.)
     """
     print(f"creating low stress bike network for lts_{lts_level}...")
-    db.execute(
+    engine.execute(
         f"""
         drop table if exists lts.lts_stress_below_{lts_level};
         create table lts.lts_stress_below_{lts_level} as(
@@ -64,7 +64,7 @@ def make_low_stress_lts(lts_level: int = 3):
 
 
 def make_bike_ped_crash_view():
-    db.execute(
+    engine.execute(
         """
         drop materialized view if exists bikepedcrashes;
         CREATE MATERIALIZED VIEW bikepedcrashes as 
@@ -79,7 +79,7 @@ def make_bike_ped_crash_view():
 
 
 def setup_user_table():
-    db.execute(
+    engine.execute(
         """
         create table if not exists connect_users.users(
                     id SERIAL primary key,
@@ -92,7 +92,7 @@ def setup_user_table():
 
 
 if __name__ == "__main__":
-    create_schemas(db)
+    create_schemas(engine)
     import_data(
         "select *, gid as dvrpc_id from transportation.lts_network",
         "lts.lts_full",
