@@ -3,6 +3,7 @@ import pandas as pd
 import json
 from geoalchemy2 import WKTElement
 from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 
 db = Database.from_config("lts", "localhost")
 
@@ -100,9 +101,11 @@ class StudySegment:
     def __create_study_segment(self, geojson_dict: dict, username: str, network_type: str):
         """
         Creates a study segment / study segments based on user's drawn geometry.
-
         """
         engine = create_engine(db.uri)
+        # For SQLAlchemy 2.0, using sessionmaker
+        Session = sessionmaker(bind=engine)
+        session = Session()
 
         segment_name = self.feature.get('properties')['name']
 
@@ -130,16 +133,10 @@ class StudySegment:
 
             query = text(query)
 
-            engine.execute(query, username=username,
-                           seg_name=segment_name, geom=wkt_element.desc)
-
-        print("creating study segment, please wait..")
-
-        study_segment_id = db.query_as_singleton(f"""
-            select id from {self.network_type}.user_segments a
-            where a.seg_name = '{self.segment_name}'""")
-
-        return study_segment_id
+            # Using session to execute
+            session.execute(query, params={
+                            'username': username, 'seg_name': segment_name, 'geom': wkt_element.desc})
+            session.commit()
 
     def __buffer_study_segment(self, distance: int = 30):
         """
@@ -415,3 +412,9 @@ class StudySegment:
             df[f"{value}"] = df[f"{value}"].apply(json.dumps)
 
         db.import_dataframe(df, "summaries.all", {"if_exists": "append"})
+
+
+if __name__ == "__main__":
+    feature = {'id': '4f62edf77b19985ca6c1cce9dad2ad79', 'type': 'Feature', 'properties': {'name': 'mark2'}, 'geometry': {
+        'coordinates': [[-74.74023128174143, 39.88986966026482], [-74.73257990584256, 39.8888964296373]], 'type': 'LineString'}}
+    StudySegment("lts", feature, "mmorley")
