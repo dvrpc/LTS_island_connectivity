@@ -104,7 +104,7 @@ class StudySegment:
         """
         engine = create_engine(db.uri)
 
-        segment_name = feature.get('properties')['name']
+        segment_name = self.feature.get('properties')['name']
 
         db_segments = self.__check_segname()
 
