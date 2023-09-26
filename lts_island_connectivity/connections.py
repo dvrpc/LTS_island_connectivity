@@ -138,6 +138,12 @@ class StudySegment:
                             'username': username, 'seg_name': segment_name, 'geom': wkt_element.desc})
             session.commit()
 
+        study_segment_id = db.query_as_singleton(f"""
+            select id from {self.network_type}.user_segments a
+            where a.seg_name = '{self.segment_name}'""")
+
+        return study_segment_id
+
     def __buffer_study_segment(self, distance: int = 30):
         """
         Creates a buffer around the study segment.
@@ -415,6 +421,6 @@ class StudySegment:
 
 
 if __name__ == "__main__":
-    feature = {'id': '4f62edf77b19985ca6c1cce9dad2ad79', 'type': 'Feature', 'properties': {'name': 'mark2'}, 'geometry': {
-        'coordinates': [[-74.74023128174143, 39.88986966026482], [-74.73257990584256, 39.8888964296373]], 'type': 'LineString'}}
+    feature = {'id': '0394c9b353713495d441e6de2f12bb7b', 'type': 'Feature', 'properties': {'name': 'real1'}, 'geometry': {'coordinates': [[-74.97010900490982, 39.882133479501164], [-74.96537580171305, 39.87931669481782], [
+        -74.96182589931531, 39.87729669245934], [-74.95653726921309, 39.87483183834513], [-74.95115204312707, 39.87214449044336], [-74.94458351624205, 39.868975137961485]], 'type': 'LineString'}}
     StudySegment("lts", feature, "mmorley")
