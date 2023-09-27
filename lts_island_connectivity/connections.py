@@ -68,8 +68,6 @@ class StudySegment:
         self.summarize_stats()
 
     def __update_highest_comfort_level(self):
-        print(self.network_type)
-        print(type(self.network_type))
         if self.network_type == 'lts':
             self.highest_comfort_level = self.highest_comfort_level
         elif self.network_type == 'sidewalk':
