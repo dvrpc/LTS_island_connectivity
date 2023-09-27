@@ -16,8 +16,8 @@ class StudySegment:
         username: str,
         highest_comfort_level: int = 2,
     ) -> None:
-        self.highest_comfort_level = self.__get_highest_comfort_level()
         self.network_type = network_type
+        self.highest_comfort_level = self.__get_highest_comfort_level()
         self.feature = feature
         self.geometry = feature['geometry']
         self.properties = feature['properties']
