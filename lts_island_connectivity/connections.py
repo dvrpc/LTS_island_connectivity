@@ -17,7 +17,8 @@ class StudySegment:
         highest_comfort_level: int = 2,
     ) -> None:
         self.network_type = network_type
-        self.highest_comfort_level = self.__get_highest_comfort_level()
+        self.highest_comfort_level = highest_comfort_level
+        self.highest_comfort_level = self.__update_highest_comfort_level()
         self.feature = feature
         self.geometry = feature['geometry']
         self.properties = feature['properties']
@@ -66,7 +67,9 @@ class StudySegment:
         )
         self.summarize_stats()
 
-    def __get_highest_comfort_level(self):
+    def __update_highest_comfort_level(self):
+        print(self.network_type)
+        print(type(self.network_type))
         if self.network_type == 'lts':
             self.highest_comfort_level = self.highest_comfort_level
         elif self.network_type == 'sidewalk':
@@ -74,6 +77,7 @@ class StudySegment:
         else:
             raise ValueError(
                 "Network type is unexpected, should be sidewalk or lts")
+        return self.highest_comfort_level
 
     def __setup_study_segment_tables(self):
         for value in ["user_segments",
@@ -415,7 +419,12 @@ class StudySegment:
         Summarizes all connections that a segment makes
         """
         attrs = vars(self)
+
+        if attrs.get('highest_comfort_level') is None or attrs.get('highest_comfort_level') == '':
+            attrs['highest_comfort_level'] = 0
+
         df = pd.json_normalize(json.loads(json.dumps(attrs, indent=2)))
+
         for value in [
             "circuit",
             "jobs",
