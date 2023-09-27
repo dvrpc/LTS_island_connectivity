@@ -16,7 +16,7 @@ class StudySegment:
         username: str,
         highest_comfort_level: int = 2,
     ) -> None:
-        self.highest_comfort_level = highest_comfort_level
+        self.highest_comfort_level = self.__get_highest_comfort_level()
         self.network_type = network_type
         self.feature = feature
         self.geometry = feature['geometry']
@@ -65,6 +65,15 @@ class StudySegment:
             "point",
         )
         self.summarize_stats()
+
+    def __get_highest_comfort_level(self):
+        if self.network_type == 'lts':
+            self.highest_comfort_level = self.highest_comfort_level
+        elif self.network_type == 'sidewalk':
+            self.highest_comfort_level = ""
+        else:
+            raise ValueError(
+                "Network type is unexpected, should be sidewalk or lts")
 
     def __setup_study_segment_tables(self):
         for value in ["user_segments",
