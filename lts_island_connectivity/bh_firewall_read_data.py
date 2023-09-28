@@ -39,9 +39,7 @@ def create_schemas(engine):
     DROP SCHEMA if exists sidewalk CASCADE;
     CREATE SCHEMA if not exists sidewalk;
     DROP SCHEMA if exists lts CASCADE;
-    CREATE SCHEMA if not exists lts;
-    DROP SCHEMA if exists connect_users cascade;
-    CREATE SCHEMA if not exists connect_users;"""
+    CREATE SCHEMA if not exists lts;"""
 
     transaction = connection.begin()
 
