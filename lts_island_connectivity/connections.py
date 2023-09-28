@@ -102,7 +102,7 @@ class StudySegment:
         """Checks to see if segment is already in DB"""
 
         segs = db.query(
-            f'select seg_name from {self.network_type}.user_segments')
+            f"select seg_name from {self.network_type}.user_segments where username = '{self.username}'")
 
         # flattens list returned from db.query
         flat_segs = [item for sublist in segs for item in sublist]
@@ -124,7 +124,7 @@ class StudySegment:
 
         if self.segment_name in db_segments:
             raise ValueError(
-                "Project name was already used. Try another name.")
+                "Project name was already used by this user. Try another name.")
 
         if self.geometry.get('type') == 'LineString':
             coordinates = self.geometry.get('coordinates', [])
@@ -167,6 +167,7 @@ class StudySegment:
                 select id, username, st_buffer(geom, {distance}) as geom
                 from {self.network_type}.user_segments
                 where seg_name = '{self.segment_name}'
+                and username = '{self.username}'
             """
         )
 
@@ -195,6 +196,7 @@ class StudySegment:
                     inner join {self.network_type}.user_segments c
                     on a.id = c.id
                     where c.seg_name = '{self.segment_name}'
+                    and c.username = '{self.username}'
                     group by a.id
             """)
 
@@ -215,6 +217,7 @@ class StudySegment:
                 inner join {self.network_type}.user_buffers c
                 on a.id = c.id
                 where b.seg_name = '{self.segment_name}'
+                and b.username = '{self.username}'
             """
         )
 
@@ -303,6 +306,7 @@ class StudySegment:
                 INNER JOIN {self.network_type}.user_buffers b ON a.id = b.id
                 INNER JOIN {self.ls_table} c ON st_intersects(b.geom, c.geom)
                 WHERE a.seg_name = '{self.segment_name}'
+                AND a.username = '{self.username}'
                 group by a.id
             ),
             nodes AS (
@@ -331,7 +335,8 @@ class StudySegment:
             f"""select size_miles from {self.network_type}.user_islands a
                 inner join {self.network_type}.user_segments b
                 on a.id = b.id
-                where b.seg_name = '{self.segment_name}'""")
+                where b.seg_name = '{self.segment_name}'
+                and b.username = '{self.username}'""")
         return q
 
     def __decide_scope(self, mileage: int = 1000):
