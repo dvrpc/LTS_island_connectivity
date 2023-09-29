@@ -301,7 +301,6 @@ class StudySegment:
                 select a.id as id, --id of user segment, tied to blobs, buffer, etc
                 a.username,
                 a.seg_name,
-                array_agg(c.{self.ids}) as ids --ids in low stress table
                 FROM {self.network_type}.user_segments a
                 INNER JOIN {self.network_type}.user_buffers b ON a.id = b.id
                 INNER JOIN {self.ls_table} c ON st_intersects(b.geom, c.geom)
