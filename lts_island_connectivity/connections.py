@@ -251,10 +251,7 @@ class StudySegment:
         print("folding in proximate parking lots and associated lu's, please wait..")
 
         if self.has_isochrone is True:
-            return  # added return break here because this is computationally
-            # expensive on philly island for no benefit, all
-            # proximate LUs proximate to segment are already
-            # well within the isochrone
+            join_table = f"{self.network_type}.user_isochrones"
         elif self.has_isochrone is False:
             join_table = f"{self.network_type}.user_blobs"
         else:
@@ -262,46 +259,41 @@ class StudySegment:
 
         db.execute(
             f"""
-                WITH proximate_lu AS (
-                    SELECT ST_Union(a.geom) as geom, c.id, c.seg_name
-                    FROM landuse_2015 a
-                    INNER JOIN {join_table} b
-                    ON ST_Intersects(a.geom, b.geom)
-                    INNER JOIN {self.network_type}.user_segments c
-                    ON b.id = c.id
-                    WHERE c.seg_name = '{self.segment_name}'
-                    AND c.username = '{self.username}'
-                    AND (
-                        a.lu15subn LIKE 'Parking%'
-                        OR a.lu15subn LIKE 'Institutional%'
-                        OR a.lu15subn LIKE 'Commercial%'
-                        OR a.lu15subn = 'Recreation: General'
-                        OR a.lu15subn = 'Transportation: Rail Right-of-Way'
-                        OR a.lu15subn = 'Transportation: Facility')
-                    GROUP BY c.id, c.seg_name
-                ),
-                proximate_lu_and_touching AS (
-                    SELECT a.id, a.seg_name, ST_Union(b.geom) as geom
-                    FROM proximate_lu a
-                    INNER JOIN landuse_2015 b
-                    ON ST_Touches(a.geom, b.geom)
-                    WHERE a.seg_name = '{self.segment_name}'
-                    AND a.username = '{self.username}'
-                    AND (
-                        b.lu15subn LIKE 'Parking%'
-                        OR b.lu15subn LIKE 'Institutional%'
-                        OR b.lu15subn LIKE 'Commercial%'
-                        OR b.lu15subn = 'Recreation: General'
-                        OR b.lu15subn = 'Transportation: Rail Right-of-Way'
-                        OR b.lu15subn = 'Transportation: Facility')
-                )
-                UPDATE {join_table} AS b
-                SET geom = st_makepolygon(st_exteriorring(ST_Union(ST_Union(a.geom, c.geom), b.geom)))
+            WITH proximate_lu AS (
+                SELECT a.geom, c.id, c.seg_name, a.lu15subn
+                FROM landuse_2015 a
+                INNER JOIN {self.network_type}.user_buffers b
+                ON ST_Intersects(a.geom, b.geom)
+                INNER JOIN {self.network_type}.user_segments c
+                ON b.id = c.id
+                WHERE c.seg_name = '{self.segment_name}'
+                AND c.username = '{self.username}'
+                AND (
+                    a.lu15subn LIKE 'Parking%'
+                    OR a.lu15subn LIKE 'Institutional%'
+                    OR a.lu15subn LIKE 'Commercial%'
+                    OR a.lu15subn = 'Recreation: General'
+                    OR a.lu15subn = 'Transportation: Rail Right-of-Way'
+                    OR a.lu15subn = 'Transportation: Facility')
+            ),
+            proximate_lu_and_touching AS (
+                SELECT st_collect(b.geom, a.geom) as geom
                 FROM proximate_lu a
-                INNER JOIN proximate_lu_and_touching c
-                ON a.id = c.id
-                WHERE b.id = a.id;
-
+                inner JOIN landuse_2015 b
+                ON ST_Touches(a.geom, b.geom)
+                Where (
+                    b.lu15subn LIKE 'Parking%'
+                    OR b.lu15subn LIKE 'Institutional%'
+                    OR b.lu15subn LIKE 'Commercial%'
+                    OR b.lu15subn = 'Recreation: General'
+                    OR b.lu15subn = 'Transportation: Rail Right-of-Way'
+                    OR b.lu15subn = 'Transportation: Facility')
+            )
+            UPDATE {self.network_type}.{join_table} AS b
+            SET geom = st_makepolygon(st_exteriorring(ST_Union(a.geom, b.geom)))
+            from proximate_lu_and_touching a
+            where b.id = {self.study_segment_id}
+                
         """
         )
 
@@ -440,7 +432,6 @@ class StudySegment:
         """
         attrs = vars(self)
 
-        print(attrs.get('ls_table'))
         if attrs.get('highest_comfort_level') is None or attrs.get('highest_comfort_level') == '':
             attrs['highest_comfort_level'] = 0
 
@@ -461,7 +452,7 @@ class StudySegment:
 
 if __name__ == "__main__":
     feature = {
-        "id": "b8a530454c5147853bb7e51a12ab2394",
+        "id": "52b26e48d946c415f0ee4e6f4b566d49",
         "type": "Feature",
         "properties": {
             "name": "vinest1"
@@ -469,15 +460,16 @@ if __name__ == "__main__":
         "geometry": {
             "coordinates": [
                 [
-                    -75.17952531700494,
-                    39.9599939259177
+                    -75.17960282833262,
+                    39.960037431966924
                 ],
                 [
-                    -75.1508916268878,
-                    39.95652471296944
+                    -75.15112577320234,
+                    39.95659228955992
                 ]
             ],
             "type": "LineString"
         }
     }
+
     StudySegment("lts", feature, "mmorley")
