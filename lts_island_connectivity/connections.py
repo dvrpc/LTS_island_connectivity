@@ -18,7 +18,10 @@ class StudySegment:
     ) -> None:
         self.network_type = network_type
         self.highest_comfort_level = highest_comfort_level
-        self.highest_comfort_level, self.ls_table = self.__update_highest_comfort_level()
+        segment_tablenames = self.__update_highest_comfort_level
+        self.highest_comfort_level = segment_tablenames[0]
+        self.ls_table = segment_tablenames[1]
+        self.ids = segment_tablenames[2]
         self.feature = feature
         self.geometry = feature['geometry']
         self.properties = feature['properties']
@@ -71,13 +74,15 @@ class StudySegment:
         if self.network_type == 'lts':
             self.highest_comfort_level = self.highest_comfort_level
             self.ls_table = f"lts_stress_below_{self.highest_comfort_level + 1}"
+            self.ids = "dvrpc_id"
         elif self.network_type == 'sidewalk':
             self.highest_comfort_level = ""
             self.ls_table = "ped_network"
+            self.ids = "objectid"
         else:
             raise ValueError(
                 "Network type is unexpected, should be sidewalk or lts")
-        return self.highest_comfort_level, self.ls_table
+        return [self.highest_comfort_level, self.ls_table, self.ids]
 
     def __setup_study_segment_tables(self):
         for value in ["user_segments",
