@@ -18,10 +18,11 @@ class StudySegment:
     ) -> None:
         self.network_type = network_type
         self.highest_comfort_level = highest_comfort_level
-        segment_tablenames = self.__update_highest_comfort_level
+        segment_tablenames = self.__update_highest_comfort_level()
         self.highest_comfort_level = segment_tablenames[0]
         self.ls_table = segment_tablenames[1]
         self.ids = segment_tablenames[2]
+        self.nodes_table = segment_tablenames[3]
         self.feature = feature
         self.geometry = feature['geometry']
         self.properties = feature['properties']
@@ -35,7 +36,7 @@ class StudySegment:
         self.__generate_proximate_blobs()
         self.has_isochrone = None
         self.miles = self.__generate_mileage()
-        self.__decide_scope()
+        self.has_isochrone = self.__decide_scope()
         self.__handle_parking_lots()
 
         self.total_pop = self.pull_stat(
@@ -75,14 +76,16 @@ class StudySegment:
             self.highest_comfort_level = self.highest_comfort_level
             self.ls_table = f"lts_stress_below_{self.highest_comfort_level + 1}"
             self.ids = "dvrpc_id"
+            self.nodes_table = f"{self.network_type}{self.highest_comfort_level + 1}nodes"
         elif self.network_type == 'sidewalk':
             self.highest_comfort_level = ""
             self.ls_table = "ped_network"
             self.ids = "objectid"
+            self.nodes_table = f"{self.network_type}nodes"
         else:
             raise ValueError(
                 "Network type is unexpected, should be sidewalk or lts")
-        return [self.highest_comfort_level, self.ls_table, self.ids]
+        return [self.highest_comfort_level, self.ls_table, self.ids, self.nodes_table]
 
     def __setup_study_segment_tables(self):
         for value in ["user_segments",
@@ -248,9 +251,16 @@ class StudySegment:
         print("folding in proximate parking lots and associated lu's, please wait..")
 
         if self.has_isochrone is True:
-            join_table = f"{self.network_type}.user_isochrones"
+            return  # added return break here because this is computationally
+            # expensive on philly island for no benefit, all
+            # proximate LUs proximate to segment are already
+            # well within the isochrone
         elif self.has_isochrone is False:
             join_table = f"{self.network_type}.user_blobs"
+        else:
+            print("something went wrong with isochrone scope")
+
+        print(join_table)
 
         db.execute(
             f"""
@@ -262,6 +272,7 @@ class StudySegment:
                     INNER JOIN {self.network_type}.user_segments c
                     ON b.id = c.id
                     WHERE c.seg_name = '{self.segment_name}'
+                    AND c.username = '{self.username}'
                     AND (
                         a.lu15subn LIKE 'Parking%'
                         OR a.lu15subn LIKE 'Institutional%'
@@ -277,6 +288,7 @@ class StudySegment:
                     INNER JOIN landuse_2015 b
                     ON ST_Touches(a.geom, b.geom)
                     WHERE a.seg_name = '{self.segment_name}'
+                    AND a.username = '{self.username}'
                     AND (
                         b.lu15subn LIKE 'Parking%'
                         OR b.lu15subn LIKE 'Institutional%'
@@ -284,7 +296,6 @@ class StudySegment:
                         OR b.lu15subn = 'Recreation: General'
                         OR b.lu15subn = 'Transportation: Rail Right-of-Way'
                         OR b.lu15subn = 'Transportation: Facility')
-                    GROUP BY a.id, a.seg_name
                 )
                 UPDATE {join_table} AS b
                 SET geom = st_makepolygon(st_exteriorring(ST_Union(ST_Union(a.geom, c.geom), b.geom)))
@@ -308,9 +319,10 @@ class StudySegment:
                 select a.id as id, --id of user segment, tied to blobs, buffer, etc
                 a.username,
                 a.seg_name,
+                array_agg(c.{self.ids}) as ids --ids in low stress table
                 FROM {self.network_type}.user_segments a
                 INNER JOIN {self.network_type}.user_buffers b ON a.id = b.id
-                INNER JOIN {self.ls_table} c ON st_intersects(b.geom, c.geom)
+                INNER JOIN {self.network_type}.{self.ls_table} c ON st_intersects(b.geom, c.geom)
                 WHERE a.seg_name = '{self.segment_name}'
                 AND a.username = '{self.username}'
                 group by a.id
@@ -318,9 +330,9 @@ class StudySegment:
             nodes AS (
                 SELECT *
                 FROM pgr_drivingDistance(
-                    'SELECT {self.ids} as id, source, target, traveltime_min as cost FROM {self.ls_table}', -- example: ls_stress_below_3
+                    'SELECT {self.ids} as id, source, target, traveltime_min as cost FROM {self.network_type}.{self.ls_table}', -- example: ls_stress_below_3
                     (SELECT array_agg("source") FROM {self.network_type}.{self.nodes_table} a
-                     INNER JOIN {self.ls_table} b ON a.id = b."source"
+                     INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
                      WHERE b.{self.ids}= ANY((SELECT ids FROM arrays)::integer[])), -- Using ANY with integer array
                     {travel_time}, false
                 ) AS di
@@ -328,7 +340,7 @@ class StudySegment:
             )
             SELECT (select id from arrays) as id, (select username from arrays), st_concavehull(st_union(st_centroid(b.geom)), .85) AS geom
             FROM nodes a
-            INNER JOIN {self.ls_table} b ON a.id = b."source"
+            INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
             WHERE (select seg_name from arrays) = '{self.segment_name}';
             """
         )
@@ -355,6 +367,7 @@ class StudySegment:
             self.has_isochrone = True
         else:
             self.has_isochrone = False
+        return self.has_isochrone
 
     def pull_stat(
         self,
@@ -449,6 +462,24 @@ class StudySegment:
 
 
 if __name__ == "__main__":
-    feature = {'id': '0394c9b353713495d441e6de2f12bb7b', 'type': 'Feature', 'properties': {'name': 'real1'}, 'geometry': {'coordinates': [[-74.97010900490982, 39.882133479501164], [-74.96537580171305, 39.87931669481782], [
-        -74.96182589931531, 39.87729669245934], [-74.95653726921309, 39.87483183834513], [-74.95115204312707, 39.87214449044336], [-74.94458351624205, 39.868975137961485]], 'type': 'LineString'}}
+    feature = {
+        "id": "b8a530454c5147853bb7e51a12ab2394",
+        "type": "Feature",
+        "properties": {
+            "name": "vinest1"
+        },
+        "geometry": {
+            "coordinates": [
+                [
+                    -75.17952531700494,
+                    39.9599939259177
+                ],
+                [
+                    -75.1508916268878,
+                    39.95652471296944
+                ]
+            ],
+            "type": "LineString"
+        }
+    }
     StudySegment("lts", feature, "mmorley")
