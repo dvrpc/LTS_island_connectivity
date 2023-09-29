@@ -260,8 +260,6 @@ class StudySegment:
         else:
             print("something went wrong with isochrone scope")
 
-        print(join_table)
-
         db.execute(
             f"""
                 WITH proximate_lu AS (
