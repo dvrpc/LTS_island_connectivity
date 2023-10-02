@@ -289,7 +289,7 @@ class StudySegment:
                     OR b.lu15subn = 'Transportation: Rail Right-of-Way'
                     OR b.lu15subn = 'Transportation: Facility')
             )
-            UPDATE {self.network_type}.{join_table} AS b
+            UPDATE {join_table} AS b
             SET geom = st_makepolygon(st_exteriorring(ST_Union(a.geom, b.geom)))
             from proximate_lu_and_touching a
             where b.id = {self.study_segment_id}
