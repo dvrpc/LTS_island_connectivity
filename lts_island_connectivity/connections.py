@@ -77,7 +77,7 @@ class StudySegment:
             self.ids = "dvrpc_id"
             self.nodes_table = f"{self.network_type}{self.highest_comfort_level + 1}nodes"
         elif self.network_type == 'sidewalk':
-            self.highest_comfort_level = 0
+            self.highest_comfort_level = ""
             self.ls_table = "ped_network"
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
@@ -488,6 +488,9 @@ class StudySegment:
             'essential_services': self.essential_services,
             'rail_stations': self.rail_stations,
         }
+
+        if cols['highest_comfort_level'] is None or cols['highest_comfort_level'] == '':
+            cols['highest_comfort_level'] = 0
 
         for key, value in cols.items():
             self.update_study_seg(key, value)
