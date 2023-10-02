@@ -94,18 +94,37 @@ class StudySegment:
                       "user_blobs",
                       "user_isochrones"]:
             if value == 'user_segments':
-                seg_name = "seg_name VARCHAR,"
+                query = f"""
+                    CREATE TABLE IF NOT EXISTS {self.network_type}.{value}(
+                        id SERIAL PRIMARY KEY,
+                        username VARCHAR,
+                        seg_name VARCHAR,
+                        network_type VARCHAR, 
+                        highest_comfort_level INT,
+                        ls_table VARCHAR,
+                        ids VARCHAR,
+                        nodes_table VARCHAR, 
+                        has_isochrone BOOL,
+                        miles REAL,
+                        total_pop INT,
+                        hisp_lat INT,
+                        circuit JSON,
+                        jobs JSON,
+                        bike_crashes JSON,
+                        ped_crashes JSON,
+                        essential_services JSON,
+                        rail_stations JSON,
+                        geom GEOMETRY
+                    );
+                """
             else:
-                seg_name = ""
-
-            query = f"""
-                CREATE TABLE IF NOT EXISTS {self.network_type}.{value}(
-                    id SERIAL PRIMARY KEY,
-                    username VARCHAR,
-                    {seg_name}
-                    geom GEOMETRY
-                );
-            """
+                query = f"""
+                    CREATE TABLE IF NOT EXISTS {self.network_type}.{value}(
+                        id SERIAL PRIMARY KEY,
+                        username VARCHAR,
+                        geom GEOMETRY
+                    );
+                """
             db.execute(query)
 
     def __check_segname(self):
@@ -426,28 +445,53 @@ class StudySegment:
             df_dict = df.to_dict("records")
             return df_dict
 
-    def summarize_stats(self):
+    def update_study_seg(self, column: str, value):
         """
         Summarizes all connections that a segment makes
+
+        :param str column: the column to update in the user_segments table
+        :param value: the value you want to put into that column
+
         """
-        attrs = vars(self)
 
-        if attrs.get('highest_comfort_level') is None or attrs.get('highest_comfort_level') == '':
-            attrs['highest_comfort_level'] = 0
+        if isinstance(value, str):
+            set_statement = f"set {column} = '{value}'"
+        elif isinstance(value, list):
+            value = json.dumps(value)
+            set_statement = f"set {column} = '{value}'"
+        else:
+            set_statement = f"set {column} = {value}"
 
-        df = pd.json_normalize(json.loads(json.dumps(attrs, indent=2)))
+        query = f"""
+            update {self.network_type}.user_segments  
+            {set_statement}
+            where id = {self.study_segment_id}           
+            and username = '{self.username}'
+        """
+        db.execute(query)
 
-        for value in [
-            "circuit",
-            "jobs",
-            "essential_services",
-            "rail_stations",
-            "bike_crashes",
-            "ped_crashes",
-        ]:
-            df[f"{value}"] = df[f"{value}"].apply(json.dumps)
+    def summarize_stats(self):
 
-        db.import_dataframe(df, "summaries.all", {"if_exists": "append"})
+        cols = {
+            'network_type': self.network_type,
+            'highest_comfort_level': self.highest_comfort_level,
+            'ls_table': self.ls_table,
+            'ids': self.ids,
+            'nodes_table': self.nodes_table,
+            'has_isochrone': self.has_isochrone,
+            'miles': self.miles,
+            'total_pop': self.total_pop,
+            'hisp_lat': self.hisp_lat,
+            'circuit': self.circuit,
+            'jobs': self.jobs,
+            'bike_crashes': self.bike_crashes,
+            'ped_crashes': self.ped_crashes,
+            'essential_services': self.essential_services,
+            'rail_stations': self.rail_stations,
+        }
+
+        for key, value in cols.items():
+            self.update_study_seg(key, value)
 
 
 if __name__ == "__main__":

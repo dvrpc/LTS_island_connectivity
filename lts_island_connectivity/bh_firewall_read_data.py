@@ -34,8 +34,6 @@ def create_schemas(engine):
     query = """
     CREATE extension if not exists postgis;
     CREATE extension if not exists pgrouting;
-    DROP SCHEMA if exists summaries CASCADE;
-    CREATE SCHEMA if not exists summaries;
     DROP SCHEMA if exists sidewalk CASCADE;
     CREATE SCHEMA if not exists sidewalk;
     DROP SCHEMA if exists lts CASCADE;
