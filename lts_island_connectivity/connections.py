@@ -1,5 +1,4 @@
 from pg_data_etl import Database
-import pandas as pd
 import json
 from geoalchemy2 import WKTElement
 from sqlalchemy import create_engine, text
@@ -78,7 +77,7 @@ class StudySegment:
             self.ids = "dvrpc_id"
             self.nodes_table = f"{self.network_type}{self.highest_comfort_level + 1}nodes"
         elif self.network_type == 'sidewalk':
-            self.highest_comfort_level = ""
+            self.highest_comfort_level = 0
             self.ls_table = "ped_network"
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
