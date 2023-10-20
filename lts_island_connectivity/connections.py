@@ -419,7 +419,10 @@ class StudySegment:
                 select round(sum({column}_in_blobs)) from total
         """
             sum_poly = db.query_as_singleton(q)
-            return int(round(sum_poly, -2))
+            if sum_poly is None:
+                return None
+            else:
+                return int(round(sum_poly, -2))
 
         if geom_type == "point":
             df = db.df(
@@ -458,6 +461,8 @@ class StudySegment:
         elif isinstance(value, list):
             value = json.dumps(value)
             set_statement = f"set {column} = '{value}'"
+        elif value is None:
+            set_statement = f"set {column} = 0"
         else:
             set_statement = f"set {column} = {value}"
 
@@ -497,25 +502,7 @@ class StudySegment:
 
 
 if __name__ == "__main__":
-    feature = {
-        "id": "52b26e48d946c415f0ee4e6f4b566d49",
-        "type": "Feature",
-        "properties": {
-            "name": "vinest1"
-        },
-        "geometry": {
-            "coordinates": [
-                [
-                    -75.17960282833262,
-                    39.960037431966924
-                ],
-                [
-                    -75.15112577320234,
-                    39.95659228955992
-                ]
-            ],
-            "type": "LineString"
-        }
-    }
+    feature = {"type": "Feature", "properties": {"name": "Horsham Pike3"}, "geometry": {"type": "LineString", "coordinates": [
+        [-75.775128038, 40.038092242], [-75.774146728, 40.039559063], [-75.767791582, 40.035283726], [-75.764520551, 40.033387466], [-75.763913074, 40.033172792], [-75.761550434, 40.034122466]]}}
 
     StudySegment("lts", feature, "mmorley")
