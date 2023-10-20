@@ -98,11 +98,11 @@ class StudySegment:
                         id SERIAL PRIMARY KEY,
                         username VARCHAR,
                         seg_name VARCHAR,
-                        network_type VARCHAR, 
+                        network_type VARCHAR,
                         highest_comfort_level INT,
                         ls_table VARCHAR,
                         ids VARCHAR,
-                        nodes_table VARCHAR, 
+                        nodes_table VARCHAR,
                         has_isochrone BOOL,
                         miles REAL,
                         total_pop INT,
@@ -153,29 +153,38 @@ class StudySegment:
         if self.segment_name in db_segments:
             raise ValueError(
                 "Project name was already used by this user. Try another name.")
+        else:
+            pass
 
         if self.geometry.get('type') == 'LineString':
             coordinates = self.geometry.get('coordinates', [])
-
-            # Convert coordinates to WKT LineString format
             coord_str = ", ".join([f"{x} {y}" for x, y in coordinates])
             line_wkt = f"LINESTRING({coord_str})"
+        elif self.geometry.get('type') == 'MultiLineString':
+            multi_coordinates = self.geometry.get('coordinates', [])
+            lines = []
+            for line in multi_coordinates:
+                coord_str = ", ".join([f"{x} {y}" for x, y in line])
+                lines.append(f"({coord_str})")
+            line_wkt = f"MULTILINESTRING({', '.join(lines)})"
 
-            wkt_element = WKTElement(line_wkt, srid=4326)
+        else:
+            raise ValueError(
+                "Geojson must be of type LineString or MultiLineString")
 
-            table_name = f"{network_type}.user_segments"
-            query = f"""
-            INSERT INTO {table_name}
-            (id, username, seg_name, geom)
-            VALUES (DEFAULT, :username, :seg_name, ST_Transform(ST_GeomFromText(:geom, 4326), 26918))
-            """
+        wkt_element = WKTElement(line_wkt, srid=4326)
+        table_name = f"{network_type}.user_segments"
+        query = f"""
+        INSERT INTO {table_name}
+        (id, username, seg_name, geom)
+        VALUES (DEFAULT, :username, :seg_name, ST_Transform(ST_GeomFromText(:geom, 4326), 26918))
+        """
 
-            query = text(query)
+        query = text(query)
 
-            # Using session to execute
-            session.execute(query, params={
-                            'username': username, 'seg_name': segment_name, 'geom': wkt_element.desc})
-            session.commit()
+        session.execute(query, params={
+                        'username': username, 'seg_name': segment_name, 'geom': wkt_element.desc})
+        session.commit()
 
         study_segment_id = db.query_as_singleton(f"""
             select id from {self.network_type}.user_segments a
@@ -230,7 +239,7 @@ class StudySegment:
 
     def __generate_proximate_blobs(self):
         """
-        Creates 'blobs' around each island collection. 
+        Creates 'blobs' around each island collection.
         Note that this query also unions the islands with the study segment buffer.
 
         """
@@ -255,15 +264,15 @@ class StudySegment:
 
         This helps avoid undercounting where essential services might not be on an
         island, but accessible from the segment via the parking lot and the parking
-        lot's adjacent land use. 
+        lot's adjacent land use.
 
-        The first cte grabs proximate land uses to the join table (blobs or isochrone). 
+        The first cte grabs proximate land uses to the join table (blobs or isochrone).
 
-        The second cte grabs relevent land uses that touch those segments. 
+        The second cte grabs relevent land uses that touch those segments.
 
         Join table is updated with the geom of both plus the original join data.
 
-        Exterior ring query removes holes formed by unmatched LUs. 
+        Exterior ring query removes holes formed by unmatched LUs.
 
         """
         print("folding in proximate parking lots and associated lu's, please wait..")
@@ -311,7 +320,7 @@ class StudySegment:
             SET geom = st_makepolygon(st_exteriorring(ST_Union(a.geom, b.geom)))
             from proximate_lu_and_touching a
             where b.id = {self.study_segment_id}
-                
+
         """
         )
 
@@ -467,9 +476,9 @@ class StudySegment:
             set_statement = f"set {column} = {value}"
 
         query = f"""
-            update {self.network_type}.user_segments  
+            update {self.network_type}.user_segments
             {set_statement}
-            where id = {self.study_segment_id}           
+            where id = {self.study_segment_id}
             and username = '{self.username}'
         """
         db.execute(query)
@@ -502,7 +511,45 @@ class StudySegment:
 
 
 if __name__ == "__main__":
-    feature = {"type": "Feature", "properties": {"name": "Horsham Pike3"}, "geometry": {"type": "LineString", "coordinates": [
-        [-75.775128038, 40.038092242], [-75.774146728, 40.039559063], [-75.767791582, 40.035283726], [-75.764520551, 40.033387466], [-75.763913074, 40.033172792], [-75.761550434, 40.034122466]]}}
 
+    feature = {
+        "id": "d277f96fa2fd67ff473757c5bbfad6a4",
+        "type": "Feature",
+        "properties": {
+            "name": "test"
+        },
+        "geometry": {
+            "coordinates": [
+                [
+                    [
+                        -75.60524862070773,
+                        39.88600098916697
+                    ],
+                    [
+                        -75.60105713468853,
+                        39.88769841697618
+                    ],
+                    [
+                        -75.59168450622859,
+                        39.888189769813465
+                    ],
+                    [
+                        -75.5894141179694,
+                        39.88872578707327
+                    ]
+                ],
+                [
+                    [
+                        -75.5894723330521,
+                        39.888636451155634
+                    ],
+                    [
+                        -75.56694309569872,
+                        39.89957923484258
+                    ]
+                ]
+            ],
+            "type": "MultiLineString"
+        }
+    }
     StudySegment("lts", feature, "mmorley")
