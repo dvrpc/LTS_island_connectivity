@@ -3,6 +3,7 @@ import json
 from geoalchemy2 import WKTElement
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+import re
 
 db = Database.from_config("lts", "localhost")
 
@@ -25,7 +26,7 @@ class StudySegment:
         self.feature = feature
         self.geometry = feature['geometry']
         self.properties = feature['properties']
-        self.segment_name = self.properties['name']
+        self.segment_name = self.__sanitize_name()
         self.username = username
         self.__setup_study_segment_tables()
         self.study_segment_id = self.__create_study_segment(
@@ -69,6 +70,11 @@ class StudySegment:
             "point",
         )
         self.summarize_stats()
+
+    def __sanitize_name(self):
+        """Remove non-standard characters from the segment name"""
+        segment_name = self.properties['name']
+        return re.sub(r'[^a-zA-Z0-9]', '', segment_name)
 
     def __update_highest_comfort_level(self):
         if self.network_type == 'lts':
@@ -142,11 +148,10 @@ class StudySegment:
         Creates a study segment / study segments based on user's drawn geometry.
         """
         engine = create_engine(db.uri)
-        # For SQLAlchemy 2.0, using sessionmaker
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        segment_name = self.feature.get('properties')['name']
+        segment_name = self.segment_name
 
         db_segments = self.__check_segname()
 
@@ -516,7 +521,7 @@ if __name__ == "__main__":
         "id": "d277f96fa2fd67ff473757c5bbfad6a4",
         "type": "Feature",
         "properties": {
-            "name": "test"
+            "name": "test$$#@#mark"
         },
         "geometry": {
             "coordinates": [
