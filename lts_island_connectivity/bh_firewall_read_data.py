@@ -187,8 +187,14 @@ if __name__ == "__main__":
         "landuse_2015",
     )
     import_data(
-        "select * from economy.nets_2015",
-        "nets_2015",
+        """select b.trct, sum(a.c000) as total_jobs from economy.lodes_combined_wac a
+            inner join economy.lodes_xwalk b
+            on a.w_geocode = b.tabblk2020 
+            where job_type = 'JT00' 
+            and segment = 'S000' 
+            and dvrpc_reg = true 
+            group by b.trct""",
+        "lodes_2020",
     )
     make_bike_ped_crash_view()
     make_low_stress_lts(4)
