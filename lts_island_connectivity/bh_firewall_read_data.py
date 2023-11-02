@@ -143,12 +143,12 @@ if __name__ == "__main__":
         "lts.lts_full",
     )
     import_data(
-        """select * from demographics.deccen_2020_block db
-            inner join demographics.census_blocks_2020 cb
-            on cb.geoid20 = db.geocode
-            where cb.dvrpc_reg = 'y'
-            """,
-        "censusblock2020_demographics",
+        """select * from demographics.deccen_2020_tracts a
+            inner join demographics.census_tracts_2020 b 
+            on b.geoid = a.geocode 
+            where b.dvrpc_reg = 'y'
+        """,
+        "censustract2020_demographics",
     )
     import_data(
         "select * from transportation.pedestriannetwork_lines where feat_type != 'UNMARKED'",

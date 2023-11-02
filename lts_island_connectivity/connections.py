@@ -24,13 +24,14 @@ class StudySegment:
         self.ids = segment_tablenames[2]
         self.nodes_table = segment_tablenames[3]
         self.feature = feature
-        self.geometry = feature['geometry']
-        self.properties = feature['properties']
+        self.geometry = feature["geometry"]
+        self.properties = feature["properties"]
         self.segment_name = self.__sanitize_name()
         self.username = username
         self.__setup_study_segment_tables()
         self.study_segment_id = self.__create_study_segment(
-            self.geometry, self.username, self.network_type)
+            self.geometry, self.username, self.network_type
+        )
         self.__buffer_study_segment()
         self.__generate_proximate_islands()
         self.__generate_proximate_blobs()
@@ -40,22 +41,37 @@ class StudySegment:
         self.__handle_parking_lots()
 
         self.total_pop = self.pull_stat(
-            self.study_segment_id, "totpop2020", "censusblock2020_demographics", "polygon")
+            self.study_segment_id,
+            "totpop2020",
+            "censustract2020_demographics",
+            "polygon",
+        )
         # self.nonwhite = self.pull_stat(
         #     self.study_segment_id, "nonwhite", "censusblock2020_demographics", "polygon"
         # )
         self.hisp_lat = self.pull_stat(
-            self.study_segment_id, "hislat2020", "censusblock2020_demographics", "polygon"
+            self.study_segment_id,
+            "hislat2020",
+            "censustract2020_demographics",
+            "polygon",
         )
         self.circuit = self.pull_stat(
-            self.study_segment_id, "circuit", "circuittrails", "line")
+            self.study_segment_id, "circuit", "circuittrails", "line"
+        )
         self.jobs = self.pull_stat(
-            self.study_segment_id, "coname", "nets_2015", "point")
+            self.study_segment_id, "coname", "nets_2015", "point"
+        )
         self.bike_crashes = self.pull_stat(
-            self.study_segment_id, "bike", "bikepedcrashes", "point",
+            self.study_segment_id,
+            "bike",
+            "bikepedcrashes",
+            "point",
         )
         self.ped_crashes = self.pull_stat(
-            self.study_segment_id, "ped", "bikepedcrashes", "point",
+            self.study_segment_id,
+            "ped",
+            "bikepedcrashes",
+            "point",
         )
         self.essential_services = self.pull_stat(
             self.study_segment_id,
@@ -73,32 +89,35 @@ class StudySegment:
 
     def __sanitize_name(self):
         """Remove non-standard characters from the segment name"""
-        segment_name = self.properties['name']
-        return re.sub(r'[^a-zA-Z0-9]', '', segment_name)
+        segment_name = self.properties["name"]
+        return re.sub(r"[^a-zA-Z0-9]", "", segment_name)
 
     def __update_highest_comfort_level(self):
-        if self.network_type == 'lts':
+        if self.network_type == "lts":
             self.highest_comfort_level = self.highest_comfort_level
             self.ls_table = f"lts_stress_below_{self.highest_comfort_level + 1}"
             self.ids = "dvrpc_id"
-            self.nodes_table = f"{self.network_type}{self.highest_comfort_level + 1}nodes"
-        elif self.network_type == 'sidewalk':
+            self.nodes_table = (
+                f"{self.network_type}{self.highest_comfort_level + 1}nodes"
+            )
+        elif self.network_type == "sidewalk":
             self.highest_comfort_level = ""
             self.ls_table = "ped_network"
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
         else:
-            raise ValueError(
-                "Network type is unexpected, should be sidewalk or lts")
+            raise ValueError("Network type is unexpected, should be sidewalk or lts")
         return [self.highest_comfort_level, self.ls_table, self.ids, self.nodes_table]
 
     def __setup_study_segment_tables(self):
-        for value in ["user_segments",
-                      "user_buffers",
-                      "user_islands",
-                      "user_blobs",
-                      "user_isochrones"]:
-            if value == 'user_segments':
+        for value in [
+            "user_segments",
+            "user_buffers",
+            "user_islands",
+            "user_blobs",
+            "user_isochrones",
+        ]:
+            if value == "user_segments":
                 query = f"""
                     CREATE TABLE IF NOT EXISTS {self.network_type}.{value}(
                         id SERIAL PRIMARY KEY,
@@ -136,14 +155,17 @@ class StudySegment:
         """Checks to see if segment is already in DB"""
 
         segs = db.query(
-            f"select seg_name from {self.network_type}.user_segments where username = '{self.username}'")
+            f"select seg_name from {self.network_type}.user_segments where username = '{self.username}'"
+        )
 
         # flattens list returned from db.query
         flat_segs = [item for sublist in segs for item in sublist]
 
         return flat_segs
 
-    def __create_study_segment(self, geojson_dict: dict, username: str, network_type: str):
+    def __create_study_segment(
+        self, geojson_dict: dict, username: str, network_type: str
+    ):
         """
         Creates a study segment / study segments based on user's drawn geometry.
         """
@@ -157,16 +179,17 @@ class StudySegment:
 
         if self.segment_name in db_segments:
             raise ValueError(
-                "Project name was already used by this user. Try another name.")
+                "Project name was already used by this user. Try another name."
+            )
         else:
             pass
 
-        if self.geometry.get('type') == 'LineString':
-            coordinates = self.geometry.get('coordinates', [])
+        if self.geometry.get("type") == "LineString":
+            coordinates = self.geometry.get("coordinates", [])
             coord_str = ", ".join([f"{x} {y}" for x, y in coordinates])
             line_wkt = f"LINESTRING({coord_str})"
-        elif self.geometry.get('type') == 'MultiLineString':
-            multi_coordinates = self.geometry.get('coordinates', [])
+        elif self.geometry.get("type") == "MultiLineString":
+            multi_coordinates = self.geometry.get("coordinates", [])
             lines = []
             for line in multi_coordinates:
                 coord_str = ", ".join([f"{x} {y}" for x, y in line])
@@ -174,8 +197,7 @@ class StudySegment:
             line_wkt = f"MULTILINESTRING({', '.join(lines)})"
 
         else:
-            raise ValueError(
-                "Geojson must be of type LineString or MultiLineString")
+            raise ValueError("Geojson must be of type LineString or MultiLineString")
 
         wkt_element = WKTElement(line_wkt, srid=4326)
         table_name = f"{network_type}.user_segments"
@@ -187,13 +209,21 @@ class StudySegment:
 
         query = text(query)
 
-        session.execute(query, params={
-                        'username': username, 'seg_name': segment_name, 'geom': wkt_element.desc})
+        session.execute(
+            query,
+            params={
+                "username": username,
+                "seg_name": segment_name,
+                "geom": wkt_element.desc,
+            },
+        )
         session.commit()
 
-        study_segment_id = db.query_as_singleton(f"""
+        study_segment_id = db.query_as_singleton(
+            f"""
             select id from {self.network_type}.user_segments a
-            where a.seg_name = '{self.segment_name}'""")
+            where a.seg_name = '{self.segment_name}'"""
+        )
 
         return study_segment_id
 
@@ -240,7 +270,8 @@ class StudySegment:
                     where c.seg_name = '{self.segment_name}'
                     and c.username = '{self.username}'
                     group by a.id
-            """)
+            """
+        )
 
     def __generate_proximate_blobs(self):
         """
@@ -376,7 +407,8 @@ class StudySegment:
                 inner join {self.network_type}.user_segments b
                 on a.id = b.id
                 where b.seg_name = '{self.segment_name}'
-                and b.username = '{self.username}'""")
+                and b.username = '{self.username}'"""
+        )
         return q
 
     def __decide_scope(self, mileage: int = 1000):
@@ -489,72 +521,50 @@ class StudySegment:
         db.execute(query)
 
     def summarize_stats(self):
-
         cols = {
-            'network_type': self.network_type,
-            'highest_comfort_level': self.highest_comfort_level,
-            'ls_table': self.ls_table,
-            'ids': self.ids,
-            'nodes_table': self.nodes_table,
-            'has_isochrone': self.has_isochrone,
-            'miles': self.miles,
-            'total_pop': self.total_pop,
-            'hisp_lat': self.hisp_lat,
-            'circuit': self.circuit,
-            'jobs': self.jobs,
-            'bike_crashes': self.bike_crashes,
-            'ped_crashes': self.ped_crashes,
-            'essential_services': self.essential_services,
-            'rail_stations': self.rail_stations,
+            "network_type": self.network_type,
+            "highest_comfort_level": self.highest_comfort_level,
+            "ls_table": self.ls_table,
+            "ids": self.ids,
+            "nodes_table": self.nodes_table,
+            "has_isochrone": self.has_isochrone,
+            "miles": self.miles,
+            "total_pop": self.total_pop,
+            "hisp_lat": self.hisp_lat,
+            "circuit": self.circuit,
+            "jobs": self.jobs,
+            "bike_crashes": self.bike_crashes,
+            "ped_crashes": self.ped_crashes,
+            "essential_services": self.essential_services,
+            "rail_stations": self.rail_stations,
         }
 
-        if cols['highest_comfort_level'] is None or cols['highest_comfort_level'] == '':
-            cols['highest_comfort_level'] = 0
+        if cols["highest_comfort_level"] is None or cols["highest_comfort_level"] == "":
+            cols["highest_comfort_level"] = 0
 
         for key, value in cols.items():
             self.update_study_seg(key, value)
 
 
 if __name__ == "__main__":
-
     feature = {
         "id": "d277f96fa2fd67ff473757c5bbfad6a4",
         "type": "Feature",
-        "properties": {
-            "name": "test$$#@#mark"
-        },
+        "properties": {"name": "test$$#@#mark"},
         "geometry": {
             "coordinates": [
                 [
-                    [
-                        -75.60524862070773,
-                        39.88600098916697
-                    ],
-                    [
-                        -75.60105713468853,
-                        39.88769841697618
-                    ],
-                    [
-                        -75.59168450622859,
-                        39.888189769813465
-                    ],
-                    [
-                        -75.5894141179694,
-                        39.88872578707327
-                    ]
+                    [-75.60524862070773, 39.88600098916697],
+                    [-75.60105713468853, 39.88769841697618],
+                    [-75.59168450622859, 39.888189769813465],
+                    [-75.5894141179694, 39.88872578707327],
                 ],
                 [
-                    [
-                        -75.5894723330521,
-                        39.888636451155634
-                    ],
-                    [
-                        -75.56694309569872,
-                        39.89957923484258
-                    ]
-                ]
+                    [-75.5894723330521, 39.888636451155634],
+                    [-75.56694309569872, 39.89957923484258],
+                ],
             ],
-            "type": "MultiLineString"
-        }
+            "type": "MultiLineString",
+        },
     }
     StudySegment("lts", feature, "mmorley")
