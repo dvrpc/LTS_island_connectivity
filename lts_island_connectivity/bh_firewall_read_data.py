@@ -187,13 +187,18 @@ if __name__ == "__main__":
         "landuse_2015",
     )
     import_data(
-        """select b.trct, sum(a.c000) as total_jobs from economy.lodes_combined_wac a
-            inner join economy.lodes_xwalk b
-            on a.w_geocode = b.tabblk2020 
-            where job_type = 'JT00' 
-            and segment = 'S000' 
-            and dvrpc_reg = true 
-            group by b.trct""",
+        """
+        select sum(a.c000) as total_jobs, c.shape from economy.lodes_combined_wac a 
+        inner join economy.lodes_xwalk b 
+        on a.w_geocode = b.tabblk2020 
+        inner join demographics.census_tracts_2020 c 
+        on b.trct = c.geoid 
+        where job_type = 'JT00'
+        and segment = 'S000'
+        and a.dvrpc_reg = true 
+        group by c.shape
+
+        """,
         "lodes_2020",
     )
     make_bike_ped_crash_view()
