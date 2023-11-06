@@ -230,7 +230,7 @@ class StudySegment:
                     select
                         a.id,
                         a.username,
-                        st_collectionextract(st_collect(b.geom)) as geom,
+                        st_collect(b.geom) as geom,
                         sum(b.size_miles)
                     from {self.network_type}.user_buffers a
                     inner join {self.network_type}.{self.network_type}{self.highest_comfort_level}_islands b
@@ -252,7 +252,7 @@ class StudySegment:
         db.execute(
             f"""
                 insert into {self.network_type}.user_blobs
-                select a.id, a.username, st_union(st_concavehull(a.geom, .85), c.geom) as geom
+                select a.id, a.username, st_union(st_concavehull(a.geom, .9), c.geom) as geom
                 from {self.network_type}.user_islands a
                 inner join {self.network_type}.user_segments b
                 on a.id = b.id
