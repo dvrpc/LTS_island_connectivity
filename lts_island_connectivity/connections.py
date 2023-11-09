@@ -50,7 +50,7 @@ class StudySegment:
         self.circuit = self.pull_stat(
             self.study_segment_id, "circuit", "circuittrails", "line")
         self.jobs = self.pull_stat(
-            self.study_segment_id, "coname", "nets_2015", "point")
+            self.study_segment_id, "total_jobs", "lodes_2020", "polygon")
         self.bike_crashes = self.pull_stat(
             self.study_segment_id, "bike", "bikepedcrashes", "point",
         )
