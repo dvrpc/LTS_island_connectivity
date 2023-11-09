@@ -133,7 +133,7 @@ class StudySegment:
                         total_pop INT,
                         hisp_lat INT,
                         circuit JSON,
-                        total_jobs JSON,
+                        total_jobs INT,
                         bike_crashes JSON,
                         ped_crashes JSON,
                         essential_services JSON,
