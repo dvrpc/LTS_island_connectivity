@@ -533,7 +533,7 @@ class StudySegment:
             "total_pop": self.total_pop,
             "hisp_lat": self.hisp_lat,
             "circuit": self.circuit,
-            "jobs": self.jobs,
+            "total_jobs": self.jobs,
             "bike_crashes": self.bike_crashes,
             "ped_crashes": self.ped_crashes,
             "essential_services": self.essential_services,
