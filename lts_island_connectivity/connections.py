@@ -20,6 +20,7 @@ class StudySegment:
         feature: dict,
         username: str,
         highest_comfort_level: int = 2,
+        overwrite: bool = False
     ) -> None:
         self.network_type = network_type
         self.highest_comfort_level = highest_comfort_level
@@ -35,7 +36,7 @@ class StudySegment:
         self.username = username
         self.__setup_study_segment_tables()
         self.study_segment_id = self.__create_study_segment(
-            self.geometry, self.username, self.network_type
+            self.geometry, self.username, self.network_type, overwrite
         )
         self.__buffer_study_segment()
         self.__generate_proximate_islands()
@@ -169,7 +170,7 @@ class StudySegment:
         return flat_segs
 
     def __create_study_segment(
-        self, geojson_dict: dict, username: str, network_type: str
+        self, geojson_dict: dict, username: str, network_type: str, overwrite: bool = False
     ):
         """
         Creates a study segment / study segments based on user's drawn geometry.
@@ -182,10 +183,17 @@ class StudySegment:
 
         db_segments = self.__check_segname()
 
-        if self.segment_name in db_segments:
+        if segment_name in db_segments and not overwrite:
             raise SegmentNameConflictError("Project name already used.")
-        else:
-            pass
+
+        if overwrite:
+            delete_query = text(f"""
+                DELETE FROM {network_type}.user_segments
+                WHERE seg_name = :seg_name AND username = :username
+            """)
+            session.execute(delete_query, params={
+                            "seg_name": segment_name, "username": username})
+            session.commit()
 
         if self.geometry.get("type") == "LineString":
             coordinates = self.geometry.get("coordinates", [])
@@ -571,4 +579,4 @@ if __name__ == "__main__":
             "type": "MultiLineString",
         },
     }
-    StudySegment("lts", feature, "mmorley")
+    StudySegment("lts", feature, "mmorley", overwrite=True)
