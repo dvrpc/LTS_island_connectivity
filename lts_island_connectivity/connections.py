@@ -8,6 +8,11 @@ import re
 db = Database.from_config("lts", "localhost")
 
 
+class SegmentNameConflictError(Exception):
+    """Exception raised when the segment name already exists."""
+    pass
+
+
 class StudySegment:
     def __init__(
         self,
@@ -178,9 +183,7 @@ class StudySegment:
         db_segments = self.__check_segname()
 
         if self.segment_name in db_segments:
-            raise ValueError(
-                "Project name was already used by this user. Try another name."
-            )
+            raise SegmentNameConflictError("Project name already used.")
         else:
             pass
 
