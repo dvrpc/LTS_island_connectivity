@@ -1,1 +1,1 @@
-from .connections import StudySegment
+from .connections import StudySegment, SegmentNameConflictError
