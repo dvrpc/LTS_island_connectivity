@@ -411,16 +411,21 @@ class StudySegment:
         )
 
     def __generate_mileage(self):
-        """Returns the mileage of the segment"""
+        """Returns the mileage of the segment or handles cases where mileage is nothing."""
 
         print("calculating mileage of proximate islands, please wait..")
-        q = db.query_as_singleton(
-            f"""select size_miles from {self.network_type}.user_islands a
-                inner join {self.network_type}.user_segments b
-                on a.id = b.id
-                where b.seg_name = '{self.segment_name}'
-                and b.username = '{self.username}'"""
-        )
+
+        try:
+            q = db.query_as_singleton(
+                f"""SELECT size_miles FROM {self.network_type}.user_islands a
+                    INNER JOIN {self.network_type}.user_segments b
+                    ON a.id = b.id
+                    WHERE b.seg_name = '{self.segment_name}'
+                    AND b.username = '{self.username}'"""
+            )
+        except IndexError:
+            q = 0.0
+
         return q
 
     def __decide_scope(self, mileage: int = 1000):
@@ -560,23 +565,23 @@ class StudySegment:
 
 if __name__ == "__main__":
     feature = {
-        "id": "d277f96fa2fd67ff473757c5bbfad6a4",
+        "id": "e6b633b53c6e142d4a29aa24c6669fc8",
         "type": "Feature",
-        "properties": {"name": "test$$#@#mark"},
+        "properties": {
+                "name": "nbbb"
+        },
         "geometry": {
             "coordinates": [
                 [
-                    [-75.60524862070773, 39.88600098916697],
-                    [-75.60105713468853, 39.88769841697618],
-                    [-75.59168450622859, 39.888189769813465],
-                    [-75.5894141179694, 39.88872578707327],
+                    -75.65335518430288,
+                    39.9681500205227
                 ],
                 [
-                    [-75.5894723330521, 39.888636451155634],
-                    [-75.56694309569872, 39.89957923484258],
-                ],
+                    -75.64944680431219,
+                    39.96841746543177
+                ]
             ],
-            "type": "MultiLineString",
-        },
+            "type": "LineString"
+        }
     }
     StudySegment("lts", feature, "mmorley", overwrite=True)
