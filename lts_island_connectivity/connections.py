@@ -59,7 +59,8 @@ class StudySegment:
             self.study_segment_id, "circuit", "circuittrails", "line"
         )
         self.jobs = self.pull_stat(
-            self.study_segment_id, "total_jobs", "lodes_2020", "polygon")
+            self.study_segment_id, "total_jobs", "lodes_2020", "polygon"
+        )
         self.bike_crashes = self.pull_stat(
             self.study_segment_id,
             "bike",
@@ -89,7 +90,7 @@ class StudySegment:
     def __sanitize_name(self):
         """Remove non-standard characters from the segment name"""
         segment_name = self.properties["name"]
-        return re.sub(r"[^a-zA-Z0-9]", "", segment_name)
+        return re.sub(r"[^a-zA-Z0-9 ]", "", segment_name)
 
     def __update_highest_comfort_level(self):
         if self.network_type == "lts":
@@ -105,8 +106,7 @@ class StudySegment:
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
         else:
-            raise ValueError(
-                "Network type is unexpected, should be sidewalk or lts")
+            raise ValueError("Network type is unexpected, should be sidewalk or lts")
         return [self.highest_comfort_level, self.ls_table, self.ids, self.nodes_table]
 
     def __setup_study_segment_tables(self):
@@ -197,8 +197,7 @@ class StudySegment:
             line_wkt = f"MULTILINESTRING({', '.join(lines)})"
 
         else:
-            raise ValueError(
-                "Geojson must be of type LineString or MultiLineString")
+            raise ValueError("Geojson must be of type LineString or MultiLineString")
 
         wkt_element = WKTElement(line_wkt, srid=4326)
         table_name = f"{network_type}.user_segments"
