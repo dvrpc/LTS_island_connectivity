@@ -112,7 +112,8 @@ class StudySegment:
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
         else:
-            raise ValueError("Network type is unexpected, should be sidewalk or lts")
+            raise ValueError(
+                "Network type is unexpected, should be sidewalk or lts")
         return [self.highest_comfort_level, self.ls_table, self.ids, self.nodes_table]
 
     def __setup_study_segment_tables(self):
@@ -208,7 +209,8 @@ class StudySegment:
             line_wkt = f"MULTILINESTRING({', '.join(lines)})"
 
         else:
-            raise ValueError("Geojson must be of type LineString or MultiLineString")
+            raise ValueError(
+                "Geojson must be of type LineString or MultiLineString")
 
         wkt_element = WKTElement(line_wkt, srid=4326)
         table_name = f"{network_type}.user_segments"
@@ -271,7 +273,7 @@ class StudySegment:
                     select
                         a.id,
                         a.username,
-                        st_collect(b.geom) as geom,
+                        st_collectionextract(st_collect(b.geom)) as geom,
                         sum(b.size_miles)
                     from {self.network_type}.user_buffers a
                     inner join {self.network_type}.{self.network_type}{self.highest_comfort_level}_islands b
@@ -294,7 +296,7 @@ class StudySegment:
         db.execute(
             f"""
                 insert into {self.network_type}.user_blobs
-                select a.id, a.username, st_union(st_concavehull(a.geom, .9), c.geom) as geom
+                select a.id, a.username, st_union(st_concavehull(a.geom, .95), c.geom) as geom
                 from {self.network_type}.user_islands a
                 inner join {self.network_type}.user_segments b
                 on a.id = b.id
