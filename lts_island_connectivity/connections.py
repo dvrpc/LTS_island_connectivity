@@ -429,7 +429,7 @@ class StudySegment:
 
         return q
 
-    def __decide_scope(self, mileage: int = 1000):
+    def __decide_scope(self, mileage: int = 300):
         """
         Decides if isochrone should be created or not based on mileage of connected islands
         """
