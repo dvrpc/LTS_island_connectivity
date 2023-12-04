@@ -514,32 +514,52 @@ class StudySegment:
             df_dict = df.to_dict("records")
             return df_dict
 
-    def pull_crashes(
-        self,
-        study_segment_id: int,
-    ):
+    def pull_crashes(self, study_segment_id: int):
         """
-        grabs crash data from dvrpc's crash API
+        Grabs crash data from DVRPC's crash API for each polygon in a MultiPolygon GeoJSON.
+        """
 
-        """
         geo = db.query(
-            f"""select st_asgeojson(st_transform(st_union(geom), 4326))
-            from {self.network_type}.user_buffers
-            where id = {study_segment_id}"""
+            f"""SELECT st_asgeojson(st_transform(st_union(geom), 4326))
+            FROM {self.network_type}.user_buffers
+            WHERE id = {study_segment_id}"""
         )
+        geojson = json.loads(geo[0][0])
 
-        r = requests.get(
-            f'https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={geo[0][0]}')
-        data = r.json()
         total_bike_crashes = 0
-
         total_ped_crashes = 0
 
-        for year, year_data in data.items():
-            if year_data['mode']:
-                total_bike_crashes += year_data['mode'].get('Bicyclists', 0)
-                total_ped_crashes += year_data['mode'].get('Pedestrians', 0)
+        if geojson['type'] == 'MultiPolygon':
+            for polygon in geojson['coordinates']:
+                polygon_geojson = json.dumps({
+                    "type": "Polygon",
+                    "coordinates": polygon
+                })
 
+                r = requests.get(
+                    f'https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={polygon_geojson}')
+                data = r.json()
+
+                for year, year_data in data.items():
+                    if year_data['mode']:
+                        total_bike_crashes += year_data['mode'].get(
+                            'Bicyclists', 0)
+                        total_ped_crashes += year_data['mode'].get(
+                            'Pedestrians', 0)
+
+        else:
+            r = requests.get(
+                f'https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={geo[0][0]}')
+            data = r.json()
+
+            for year, year_data in data.items():
+                if year_data['mode']:
+                    total_bike_crashes += year_data['mode'].get(
+                        'Bicyclists', 0)
+                    total_ped_crashes += year_data['mode'].get(
+                        'Pedestrians', 0)
+
+        # Prepare the final aggregated result
         total_crashes = {
             "Total Bike Crashes": total_bike_crashes,
             "Total Pedestrian Crashes": total_ped_crashes
