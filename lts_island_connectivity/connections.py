@@ -539,6 +539,8 @@ class StudySegment:
                 r = requests.get(
                     f'https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={polygon_geojson}')
                 data = r.json()
+                print(data)
+                print("printed data here")
 
                 for year, year_data in data.items():
                     if year_data['mode']:
@@ -559,7 +561,6 @@ class StudySegment:
                     total_ped_crashes += year_data['mode'].get(
                         'Pedestrians', 0)
 
-        # Prepare the final aggregated result
         total_crashes = {
             "Total Bike Crashes": total_bike_crashes,
             "Total Pedestrian Crashes": total_ped_crashes
