@@ -502,10 +502,22 @@ class StudySegment:
         if geom_type == "line":
             df = db.df(
                 f"""
-                    select a.{column}, st_length(a.geom)/1609 as miles from {table} a, {polygon} b
-                        where st_intersects(a.geom, b.geom)
+                select 
+                    {column},
+                    sum(miles) as miles
+                from (
+                    select 
+                        a.{column}, 
+                        st_length(a.geom)/1609 as miles
+                    from 
+                        {table} a, 
+                        {polygon} b
+                    where 
+                        st_intersects(a.geom, b.geom)
                         and (b.id = {self.study_segment_id})
-                        group by a.{column}, st_length(a.geom)
+                ) as subquery
+                group by 
+                    {column};
                     """
             )
             df_dict = df.to_dict("records")
