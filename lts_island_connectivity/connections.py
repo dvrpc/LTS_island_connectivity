@@ -4,6 +4,7 @@ from geoalchemy2 import WKTElement
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import re
+import requests
 
 db = Database.from_config("lts", "localhost")
 
@@ -67,17 +68,8 @@ class StudySegment:
         self.jobs = self.pull_stat(
             self.study_segment_id, "total_jobs", "lodes_2020", "polygon"
         )
-        self.bike_crashes = self.pull_stat(
+        self.bike_ped_crashes = self.pull_crashes(
             self.study_segment_id,
-            "bike",
-            "bikepedcrashes",
-            "point",
-        )
-        self.ped_crashes = self.pull_stat(
-            self.study_segment_id,
-            "ped",
-            "bikepedcrashes",
-            "point",
         )
         self.essential_services = self.pull_stat(
             self.study_segment_id,
@@ -141,8 +133,7 @@ class StudySegment:
                         hisp_lat INT,
                         circuit JSON,
                         total_jobs INT,
-                        bike_crashes JSON,
-                        ped_crashes JSON,
+                        bike_ped_crashes JSON,
                         essential_services JSON,
                         rail_stations JSON,
                         geom GEOMETRY
@@ -502,26 +493,59 @@ class StudySegment:
         if geom_type == "line":
             df = db.df(
                 f"""
-                select 
+                select
                     {column},
                     sum(miles) as miles
                 from (
-                    select 
-                        a.{column}, 
+                    select
+                        a.{column},
                         st_length(a.geom)/1609 as miles
-                    from 
-                        {table} a, 
+                    from
+                        {table} a,
                         {polygon} b
-                    where 
+                    where
                         st_intersects(a.geom, b.geom)
                         and (b.id = {self.study_segment_id})
                 ) as subquery
-                group by 
+                group by
                     {column};
                     """
             )
             df_dict = df.to_dict("records")
             return df_dict
+
+    def pull_crashes(
+        self,
+        study_segment_id: int,
+    ):
+        """
+        grabs crash data from dvrpc's crash API
+
+        """
+        geo = db.query(
+            f"""select st_asgeojson(st_transform(st_union(geom), 4326))
+            from {self.network_type}.user_buffers
+            where id = {study_segment_id}"""
+        )
+
+        r = requests.get(
+            f'https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={geo[0][0]}')
+        data = r.json()
+        total_bike_crashes = 0
+
+        total_ped_crashes = 0
+
+        for year, year_data in data.items():
+            if year_data['mode']:
+                total_bike_crashes += year_data['mode'].get('Bicyclists', 0)
+                total_ped_crashes += year_data['mode'].get('Pedestrians', 0)
+
+        total_crashes = {
+            "Total Bike Crashes": total_bike_crashes,
+            "Total Pedestrian Crashes": total_ped_crashes
+        }
+
+        return [total_crashes]
 
     def update_study_seg(self, column: str, value):
         """
@@ -563,8 +587,7 @@ class StudySegment:
             "hisp_lat": self.hisp_lat,
             "circuit": self.circuit,
             "total_jobs": self.jobs,
-            "bike_crashes": self.bike_crashes,
-            "ped_crashes": self.ped_crashes,
+            "bike_ped_crashes": self.bike_ped_crashes,
             "essential_services": self.essential_services,
             "rail_stations": self.rail_stations,
         }

@@ -15,6 +15,7 @@ setup(
         "psycopg2-binary",
         "python-dotenv",
         "tqdm",
+        "requests"
 
     ],
 )
