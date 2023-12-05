@@ -11,6 +11,7 @@ db = Database.from_config("lts", "localhost")
 
 class SegmentNameConflictError(Exception):
     """Exception raised when the segment name already exists."""
+
     pass
 
 
@@ -21,7 +22,7 @@ class StudySegment:
         feature: dict,
         username: str,
         highest_comfort_level: int = 2,
-        overwrite: bool = False
+        overwrite: bool = False,
     ) -> None:
         self.network_type = network_type
         self.highest_comfort_level = highest_comfort_level
@@ -104,8 +105,7 @@ class StudySegment:
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
         else:
-            raise ValueError(
-                "Network type is unexpected, should be sidewalk or lts")
+            raise ValueError("Network type is unexpected, should be sidewalk or lts")
         return [self.highest_comfort_level, self.ls_table, self.ids, self.nodes_table]
 
     def __setup_study_segment_tables(self):
@@ -162,7 +162,11 @@ class StudySegment:
         return flat_segs
 
     def __create_study_segment(
-        self, geojson_dict: dict, username: str, network_type: str, overwrite: bool = False
+        self,
+        geojson_dict: dict,
+        username: str,
+        network_type: str,
+        overwrite: bool = False,
     ):
         """
         Creates a study segment / study segments based on user's drawn geometry.
@@ -179,12 +183,15 @@ class StudySegment:
             raise SegmentNameConflictError("Project name already used.")
 
         if overwrite:
-            delete_query = text(f"""
+            delete_query = text(
+                f"""
                 DELETE FROM {network_type}.user_segments
                 WHERE seg_name = :seg_name AND username = :username
-            """)
-            session.execute(delete_query, params={
-                            "seg_name": segment_name, "username": username})
+            """
+            )
+            session.execute(
+                delete_query, params={"seg_name": segment_name, "username": username}
+            )
             session.commit()
 
         if self.geometry.get("type") == "LineString":
@@ -200,8 +207,7 @@ class StudySegment:
             line_wkt = f"MULTILINESTRING({', '.join(lines)})"
 
         else:
-            raise ValueError(
-                "Geojson must be of type LineString or MultiLineString")
+            raise ValueError("Geojson must be of type LineString or MultiLineString")
 
         wkt_element = WKTElement(line_wkt, srid=4326)
         table_name = f"{network_type}.user_segments"
@@ -529,42 +535,42 @@ class StudySegment:
         total_bike_crashes = 0
         total_ped_crashes = 0
 
-        if geojson['type'] == 'MultiPolygon':
-            for polygon in geojson['coordinates']:
-                polygon_geojson = json.dumps({
-                    "type": "Polygon",
-                    "coordinates": polygon
-                })
+        if geojson["type"] == "MultiPolygon":
+            for polygon in geojson["coordinates"]:
+                polygon_geojson = json.dumps(
+                    {"type": "Polygon", "coordinates": polygon}
+                )
 
                 r = requests.get(
-                    f'https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={polygon_geojson}')
+                    f"https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={polygon_geojson}"
+                )
                 data = r.json()
 
                 for year, year_data in data.items():
                     try:
-                        if year_data['mode']:
-                            total_bike_crashes += year_data['mode'].get(
-                                'Bicyclists', 0)
-                            total_ped_crashes += year_data['mode'].get(
-                                'Pedestrians', 0)
+                        if year_data["mode"]:
+                            total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
+                            total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
                     except TypeError:
                         print(year_data)
 
         else:
             r = requests.get(
-                f'https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={geo[0][0]}')
+                f"https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={geo[0][0]}"
+            )
             data = r.json()
 
             for year, year_data in data.items():
-                if year_data['mode']:
-                    total_bike_crashes += year_data['mode'].get(
-                        'Bicyclists', 0)
-                    total_ped_crashes += year_data['mode'].get(
-                        'Pedestrians', 0)
+                try:
+                    if year_data["mode"]:
+                        total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
+                        total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
+                except TypeError:
+                    print(year_data)
 
         total_crashes = {
             "Total Bike Crashes": total_bike_crashes,
-            "Total Pedestrian Crashes": total_ped_crashes
+            "Total Pedestrian Crashes": total_ped_crashes,
         }
 
         return [total_crashes]
@@ -625,21 +631,13 @@ if __name__ == "__main__":
     feature = {
         "id": "e6b633b53c6e142d4a29aa24c6669fc8",
         "type": "Feature",
-        "properties": {
-                "name": "nbbb"
-        },
+        "properties": {"name": "nbbb"},
         "geometry": {
             "coordinates": [
-                [
-                    -75.65335518430288,
-                    39.9681500205227
-                ],
-                [
-                    -75.64944680431219,
-                    39.96841746543177
-                ]
+                [-75.65335518430288, 39.9681500205227],
+                [-75.64944680431219, 39.96841746543177],
             ],
-            "type": "LineString"
-        }
+            "type": "LineString",
+        },
     }
     StudySegment("lts", feature, "mmorley", overwrite=True)
