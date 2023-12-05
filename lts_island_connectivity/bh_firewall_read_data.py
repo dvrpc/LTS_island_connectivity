@@ -119,10 +119,30 @@ if __name__ == "__main__":
         "lts.lts_full",
     )
     import_data(
-        """select * from demographics.deccen_2020_tracts a
-            inner join demographics.census_tracts_2020 b 
-            on b.geoid = a.geocode 
-            where b.dvrpc_reg = 'y'
+        """
+        select 
+          a.d_cntest as disabled, 
+          a.d_cntmoe as disabled_moe,
+          a.em_cntest as ethnic_minority,
+          a.em_cntmoe as ethnic_minority_moe, 
+          a.f_cntest as female,
+          a.f_cntmoe as female_moe, 
+          a.fb_cntest as foreign_born,
+          a.fb_cntmoe as foreign_born_moe, 
+          a.lep_cntest as lep,
+          a.lep_cntmoe as lep_moe, 
+          a.li_cntest as low_income,
+          a.li_cntmoe as low_income_moe, 
+          a.oa_cntest as older_adult,
+          a.oa_cntmoe as older_adult_moe, 
+          a.rm_cntest as racial_minority,
+          a.rm_cntmoe as racial_minority_moe, 
+          a.y_cntest as youth,
+          a.y_cntmoe as youth_moe, 
+          a.u_tpopest as total_pop,
+          a.u_tpopmoe as total_pop_moe, 
+          a.shape
+        from demographics.ipd_2021 a 
         """,
         "censustract2020_demographics",
     )

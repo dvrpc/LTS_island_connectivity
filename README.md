@@ -56,14 +56,43 @@ In the future, pg-data-etl may be removed from this repo, in favor of more direc
 One of the dependencies of this repo, [network-routing](https://github.com/dvrpc/network-routing/tree/master/network_routing), also uses pg-data-etl, 
 so unless that is refactored, it remains necessary to install and set up here.
 
+You also need a .env file, for the parts of the project that don't use pg-data-etl. This includes credentials to your DB and the DVRPC GIS DB, which has been redacted below.
+
+```
+PG_DUMP_PATH='/usr/bin/pg_dump'
+BACKUP_FILENAME="backup.sql"
+DUMP_PATH="/path/${BACKUP_FILENAME}"
+
+DATABASE_URL = postgresql://user:pw@localhost:port/lts
+HOST = localhost
+UN = user
+DB_NAME = lts
+PW = pw
+PORT = port
+
+GIS_DATABASE_URL = postgresql://user:ps@host:port/db
+GIS_HOST = 
+GIS_USER = 
+GIS_DB_NAME = 
+GIS_PASSWORD = 
+GIS_PORT = 
+```
 
 ### Makefile
 
-Be sure you've created a Postgres database called "lts", and that you have the above dependencies installed and configured.
+Be sure that you have the above dependencies installed and configured.
 
-Run `Make all` to import all data and build the islands for this analysis. The Makefile in this repo shows the steps used with that command.
+In order for the makefile to work, you have to be either the superuser or another postgres user with create db privileges. You can do the following and add yourself as a user.
+```
+psql -U postgres
+CREATE USER myuser WITH PASSWORD 'securepassword';
+ALTER ROLE myuser CREATEDB;
+\q
+```
 
-Make all will enable postgis and pgrouting on the lts database that you created, and will load all data from the DVRPC postgres server and any other sources.
+Run `make all` to import all data and build the islands for this analysis. The Makefile in this repo shows the steps used with that command.
+
+Make all will create the db, enable postgis and pgrouting on the lts database that you created, and will load all data from the DVRPC postgres server and any other sources.
 
 Note that this only works behind the DVRPC firewall.
 
