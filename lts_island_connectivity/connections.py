@@ -54,15 +54,60 @@ class StudySegment:
             "censustract2020_demographics",
             "polygon",
         )
-        # self.nonwhite = self.pull_stat(
-        #     self.study_segment_id, "nonwhite", "censusblock2020_demographics", "polygon"
-        # )
-        # self.hisp_lat = self.pull_stat(
-        #     self.study_segment_id,
-        #     "hislat2020",
-        #     "censustract2020_demographics",
-        #     "polygon",
-        # )
+        self.disabled = self.pull_stat(
+            self.study_segment_id,
+            "disabled",
+            "censustract2020_demographics",
+            "polygon",
+        )
+        self.ethnic_minority = self.pull_stat(
+            self.study_segment_id,
+            "ethnic_minority",
+            "censustract2020_demographics",
+            "polygon",
+        )
+        self.female = self.pull_stat(
+            self.study_segment_id,
+            "female",
+            "censustract2020_demographics",
+            "polygon",
+        )
+        self.foreign_born = self.pull_stat(
+            self.study_segment_id,
+            "foreign_born",
+            "censustract2020_demographics",
+            "polygon",
+        )
+        self.lep = self.pull_stat(
+            self.study_segment_id,
+            "lep",
+            "censustract2020_demographics",
+            "polygon",
+        )
+        self.low_income = self.pull_stat(
+            self.study_segment_id,
+            "low_income",
+            "censustract2020_demographics",
+            "polygon",
+        )
+        self.older_adult = self.pull_stat(
+            self.study_segment_id,
+            "older_adult",
+            "censustract2020_demographics",
+            "polygon",
+        )
+        self.racial_minority = self.pull_stat(
+            self.study_segment_id,
+            "racial_minority",
+            "censustract2020_demographics",
+            "polygon",
+        )
+        self.youth = self.pull_stat(
+            self.study_segment_id,
+            "youth",
+            "censustract2020_demographics",
+            "polygon",
+        )
         self.circuit = self.pull_stat(
             self.study_segment_id, "circuit", "circuittrails", "line"
         )
@@ -131,6 +176,15 @@ class StudySegment:
                         has_isochrone BOOL,
                         miles REAL,
                         total_pop INT,
+                        disabled INT,
+                        ethnic_minority INT,
+                        female INT,
+                        foreign_born INT,
+                        lep INT,
+                        low_income INT,
+                        older_adult INT,
+                        racial_minority INT,
+                        youth INT,
                         circuit JSON,
                         total_jobs INT,
                         bike_ped_crashes JSON,
@@ -618,6 +672,15 @@ class StudySegment:
             "has_isochrone": self.has_isochrone,
             "miles": self.miles,
             "total_pop": self.total_pop,
+            "disabled": self.disabled,
+            "ethnic_minority": self.ethnic_minority,
+            "female": self.female,
+            "foreign_born": self.foreign_born,
+            "lep": self.lep,
+            "low_income": self.low_income,
+            "older_adult": self.older_adult,
+            "racial_minority": self.racial_minority,
+            "youth": self.youth,
             "circuit": self.circuit,
             "total_jobs": self.jobs,
             "bike_ped_crashes": self.bike_ped_crashes,
