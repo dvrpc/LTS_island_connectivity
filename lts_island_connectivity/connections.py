@@ -50,19 +50,19 @@ class StudySegment:
 
         self.total_pop = self.pull_stat(
             self.study_segment_id,
-            "totpop2020",
+            "total_pop",
             "censustract2020_demographics",
             "polygon",
         )
         # self.nonwhite = self.pull_stat(
         #     self.study_segment_id, "nonwhite", "censusblock2020_demographics", "polygon"
         # )
-        self.hisp_lat = self.pull_stat(
-            self.study_segment_id,
-            "hislat2020",
-            "censustract2020_demographics",
-            "polygon",
-        )
+        # self.hisp_lat = self.pull_stat(
+        #     self.study_segment_id,
+        #     "hislat2020",
+        #     "censustract2020_demographics",
+        #     "polygon",
+        # )
         self.circuit = self.pull_stat(
             self.study_segment_id, "circuit", "circuittrails", "line"
         )
@@ -105,7 +105,8 @@ class StudySegment:
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
         else:
-            raise ValueError("Network type is unexpected, should be sidewalk or lts")
+            raise ValueError(
+                "Network type is unexpected, should be sidewalk or lts")
         return [self.highest_comfort_level, self.ls_table, self.ids, self.nodes_table]
 
     def __setup_study_segment_tables(self):
@@ -130,7 +131,6 @@ class StudySegment:
                         has_isochrone BOOL,
                         miles REAL,
                         total_pop INT,
-                        hisp_lat INT,
                         circuit JSON,
                         total_jobs INT,
                         bike_ped_crashes JSON,
@@ -190,7 +190,8 @@ class StudySegment:
             """
             )
             session.execute(
-                delete_query, params={"seg_name": segment_name, "username": username}
+                delete_query, params={
+                    "seg_name": segment_name, "username": username}
             )
             session.commit()
 
@@ -207,7 +208,8 @@ class StudySegment:
             line_wkt = f"MULTILINESTRING({', '.join(lines)})"
 
         else:
-            raise ValueError("Geojson must be of type LineString or MultiLineString")
+            raise ValueError(
+                "Geojson must be of type LineString or MultiLineString")
 
         wkt_element = WKTElement(line_wkt, srid=4326)
         table_name = f"{network_type}.user_segments"
@@ -549,8 +551,10 @@ class StudySegment:
                 for year, year_data in data.items():
                     try:
                         if year_data["mode"]:
-                            total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
-                            total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
+                            total_bike_crashes += year_data["mode"].get(
+                                "Bicyclists", 0)
+                            total_ped_crashes += year_data["mode"].get(
+                                "Pedestrians", 0)
                     except TypeError:
                         print(year_data)
 
@@ -563,8 +567,10 @@ class StudySegment:
             for year, year_data in data.items():
                 try:
                     if year_data["mode"]:
-                        total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
-                        total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
+                        total_bike_crashes += year_data["mode"].get(
+                            "Bicyclists", 0)
+                        total_ped_crashes += year_data["mode"].get(
+                            "Pedestrians", 0)
                 except TypeError:
                     print(year_data)
 
@@ -612,7 +618,6 @@ class StudySegment:
             "has_isochrone": self.has_isochrone,
             "miles": self.miles,
             "total_pop": self.total_pop,
-            "hisp_lat": self.hisp_lat,
             "circuit": self.circuit,
             "total_jobs": self.jobs,
             "bike_ped_crashes": self.bike_ped_crashes,
