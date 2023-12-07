@@ -150,8 +150,7 @@ class StudySegment:
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
         else:
-            raise ValueError(
-                "Network type is unexpected, should be sidewalk or lts")
+            raise ValueError("Network type is unexpected, should be sidewalk or lts")
         return [self.highest_comfort_level, self.ls_table, self.ids, self.nodes_table]
 
     def __setup_study_segment_tables(self):
@@ -244,8 +243,7 @@ class StudySegment:
             """
             )
             session.execute(
-                delete_query, params={
-                    "seg_name": segment_name, "username": username}
+                delete_query, params={"seg_name": segment_name, "username": username}
             )
             session.commit()
 
@@ -262,8 +260,7 @@ class StudySegment:
             line_wkt = f"MULTILINESTRING({', '.join(lines)})"
 
         else:
-            raise ValueError(
-                "Geojson must be of type LineString or MultiLineString")
+            raise ValueError("Geojson must be of type LineString or MultiLineString")
 
         wkt_element = WKTElement(line_wkt, srid=4326)
         table_name = f"{network_type}.user_segments"
@@ -532,7 +529,8 @@ class StudySegment:
                     select round(st_area(st_intersection(a.geom, b.geom)) / st_area(a.geom) * a.{column}) as {column}_in_blobs
                     from {table} a, {polygon} b
                     where (st_intersects (a.geom, b.geom))
-                    and (b.id = {self.study_segment_id}))
+                    and (b.id = {self.study_segment_id})
+                    and a.{column} >= 0)
                 select round(sum({column}_in_blobs)) from total
         """
             sum_poly = db.query_as_singleton(q)
@@ -605,10 +603,8 @@ class StudySegment:
                 for year, year_data in data.items():
                     try:
                         if year_data["mode"]:
-                            total_bike_crashes += year_data["mode"].get(
-                                "Bicyclists", 0)
-                            total_ped_crashes += year_data["mode"].get(
-                                "Pedestrians", 0)
+                            total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
+                            total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
                     except TypeError:
                         print(year_data)
 
@@ -621,10 +617,8 @@ class StudySegment:
             for year, year_data in data.items():
                 try:
                     if year_data["mode"]:
-                        total_bike_crashes += year_data["mode"].get(
-                            "Bicyclists", 0)
-                        total_ped_crashes += year_data["mode"].get(
-                            "Pedestrians", 0)
+                        total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
+                        total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
                 except TypeError:
                     print(year_data)
 
