@@ -191,6 +191,7 @@ class StudySegment:
                         essential_services JSON,
                         rail_stations JSON,
                         deleted BOOL,
+                        shared BOOL,
                         geom GEOMETRY
                     );
                 """
