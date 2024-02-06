@@ -5,8 +5,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import re
 import requests
-
-db = Database.from_config("lts", "localhost")
+from pathlib import Path
 
 
 class SegmentNameConflictError(Exception):
@@ -23,7 +22,9 @@ class StudySegment:
         username: str,
         highest_comfort_level: int = 2,
         overwrite: bool = False,
+        pg_config_filepath: str = None,
     ) -> None:
+        self.db = Database.from_config("lts", "localhost", pg_config_filepath)
         self.network_type = network_type
         self.highest_comfort_level = highest_comfort_level
         segment_tablenames = self.__update_highest_comfort_level()
@@ -150,8 +151,7 @@ class StudySegment:
             self.ids = "objectid"
             self.nodes_table = f"{self.network_type}nodes"
         else:
-            raise ValueError(
-                "Network type is unexpected, should be sidewalk or lts")
+            raise ValueError("Network type is unexpected, should be sidewalk or lts")
         return [self.highest_comfort_level, self.ls_table, self.ids, self.nodes_table]
 
     def __setup_study_segment_tables(self):
@@ -203,12 +203,12 @@ class StudySegment:
                         geom GEOMETRY
                     );
                 """
-            db.execute(query)
+            self.db.execute(query)
 
     def __check_segname(self):
         """Checks to see if segment is already in DB"""
 
-        segs = db.query(
+        segs = self.db.query(
             f"select seg_name from {self.network_type}.user_segments where username = '{self.username}'"
         )
 
@@ -227,7 +227,7 @@ class StudySegment:
         """
         Creates a study segment / study segments based on user's drawn geometry.
         """
-        engine = create_engine(db.uri)
+        engine = create_engine(self.db.uri)
         Session = sessionmaker(bind=engine)
         session = Session()
 
@@ -246,8 +246,7 @@ class StudySegment:
             """
             )
             session.execute(
-                delete_query, params={
-                    "seg_name": segment_name, "username": username}
+                delete_query, params={"seg_name": segment_name, "username": username}
             )
             session.commit()
 
@@ -264,8 +263,7 @@ class StudySegment:
             line_wkt = f"MULTILINESTRING({', '.join(lines)})"
 
         else:
-            raise ValueError(
-                "Geojson must be of type LineString or MultiLineString")
+            raise ValueError("Geojson must be of type LineString or MultiLineString")
 
         wkt_element = WKTElement(line_wkt, srid=4326)
         table_name = f"{network_type}.user_segments"
@@ -287,7 +285,7 @@ class StudySegment:
         )
         session.commit()
 
-        study_segment_id = db.query_as_singleton(
+        study_segment_id = self.db.query_as_singleton(
             f"""
             select id from {self.network_type}.user_segments a
             where a.seg_name = '{self.segment_name}'"""
@@ -301,7 +299,7 @@ class StudySegment:
         Default for distance is 30m (100 ft) assuming your data is using meters
         """
 
-        db.execute(
+        self.db.execute(
             f"""
                 insert into {self.network_type}.user_buffers
                 select id, username, st_buffer(geom, {distance}) as geom
@@ -320,7 +318,7 @@ class StudySegment:
 
         print("generating proximate islands, please wait..")
 
-        db.execute(
+        self.db.execute(
             f"""
                 alter table {self.network_type}.user_islands
                 add column if not exists size_miles float;
@@ -348,7 +346,7 @@ class StudySegment:
 
         """
 
-        db.execute(
+        self.db.execute(
             f"""
                 insert into {self.network_type}.user_blobs
                 select a.id, a.username, st_union(st_concavehull(a.geom, .95), c.geom) as geom
@@ -388,7 +386,7 @@ class StudySegment:
         else:
             print("something went wrong with isochrone scope")
 
-        db.execute(
+        self.db.execute(
             f"""
             WITH proximate_lu AS (
                 SELECT a.geom, c.id, c.seg_name, a.lu15subn
@@ -433,7 +431,7 @@ class StudySegment:
         Creates isochrone based on study_segment
         """
 
-        db.execute(
+        self.db.execute(
             f"""
             insert into {self.network_type}.user_isochrones
             WITH arrays AS (
@@ -472,7 +470,7 @@ class StudySegment:
         print("calculating mileage of proximate islands, please wait..")
 
         try:
-            q = db.query_as_singleton(
+            q = self.db.query_as_singleton(
                 f"""SELECT size_miles FROM {self.network_type}.user_islands a
                     INNER JOIN {self.network_type}.user_segments b
                     ON a.id = b.id
@@ -538,14 +536,14 @@ class StudySegment:
                     and a.{column} >= 0)
                 select round(sum({column}_in_blobs)) from total
         """
-            sum_poly = db.query_as_singleton(q)
+            sum_poly = self.db.query_as_singleton(q)
             if sum_poly is None:
                 return None
             else:
                 return int(round(sum_poly, -2))
 
         if geom_type == "point":
-            df = db.df(
+            df = self.db.df(
                 f"""select count(a.{column}), a.{column} from {table} a, {polygon} b
                     where st_intersects(a.geom, b.geom)
                     and (b.id = {self.study_segment_id})
@@ -556,7 +554,7 @@ class StudySegment:
             return df_dict
 
         if geom_type == "line":
-            df = db.df(
+            df = self.db.df(
                 f"""
                 select
                     {column},
@@ -584,7 +582,7 @@ class StudySegment:
         Grabs crash data from DVRPC's crash API for each polygon in a MultiPolygon GeoJSON.
         """
 
-        geo = db.query(
+        geo = self.db.query(
             f"""SELECT st_asgeojson(st_transform(st_union(geom), 4326))
             FROM {self.network_type}.user_buffers
             WHERE id = {study_segment_id}"""
@@ -608,10 +606,8 @@ class StudySegment:
                 for year, year_data in data.items():
                     try:
                         if year_data["mode"]:
-                            total_bike_crashes += year_data["mode"].get(
-                                "Bicyclists", 0)
-                            total_ped_crashes += year_data["mode"].get(
-                                "Pedestrians", 0)
+                            total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
+                            total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
                     except TypeError:
                         print(year_data)
 
@@ -624,10 +620,8 @@ class StudySegment:
             for year, year_data in data.items():
                 try:
                     if year_data["mode"]:
-                        total_bike_crashes += year_data["mode"].get(
-                            "Bicyclists", 0)
-                        total_ped_crashes += year_data["mode"].get(
-                            "Pedestrians", 0)
+                        total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
+                        total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
                 except TypeError:
                     print(year_data)
 
@@ -663,7 +657,7 @@ class StudySegment:
             where id = {self.study_segment_id}
             and username = '{self.username}'
         """
-        db.execute(query)
+        self.db.execute(query)
 
     def summarize_stats(self):
         cols = {
@@ -711,4 +705,10 @@ if __name__ == "__main__":
             "type": "LineString",
         },
     }
-    StudySegment("lts", feature, "mmorley", overwrite=True)
+    StudySegment(
+        "lts",
+        feature,
+        "mmorley",
+        overwrite=True,
+        pg_config_filepath=Path.home() / "repos" / ".test" / "database_connections.cfg",
+    )
