@@ -24,7 +24,7 @@ class StudySegment:
         overwrite: bool = False,
         pg_config_filepath: str = None,
     ) -> None:
-        self.db = Database.from_config("lts", "localhost", pg_config_filepath)
+        self.db = Database.from_config("localhost", pg_config_filepath)
         self.network_type = network_type
         self.highest_comfort_level = highest_comfort_level
         segment_tablenames = self.__update_highest_comfort_level()

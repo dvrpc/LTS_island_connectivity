@@ -1,11 +1,10 @@
 from network_routing.gaps.segments.generate_islands import generate_islands
 from pg_data_etl import Database
 
-db = Database.from_config("lts", "localhost")
+db = Database.from_config("localhost")
 
 
-generate_islands(db, "sidewalk.ped_network",
-                 "objectid", "sidewalk_islands", "sidewalk")
+generate_islands(db, "sidewalk.ped_network", "objectid", "sidewalk_islands", "sidewalk")
 generate_islands(
     db,
     "lts.lts_stress_below_2",
