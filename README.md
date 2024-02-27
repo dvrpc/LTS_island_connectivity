@@ -47,6 +47,7 @@ super_pw = this-is-another-placeholder-password
 host = localhost
 un = postgres
 pw = your-password-here
+db_name = your-db-name 
 ```
 
 This file doesn't need to be recreated for other projects that use pg-data-etl, just add any credentials for new connections. 
