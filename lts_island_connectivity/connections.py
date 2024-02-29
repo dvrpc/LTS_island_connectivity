@@ -615,22 +615,23 @@ class StudySegment:
             r = requests.get(
                 f"https://cloud.dvrpc.org/api/crash-data/v1/summary?geojson={geo[0][0]}"
             )
-            data = r.json()
-
-            for year, year_data in data.items():
-                try:
-                    if year_data["mode"]:
-                        total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
-                        total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
-                except TypeError:
-                    print(year_data)
-
-        total_crashes = {
-            "Total Bike Crashes": total_bike_crashes,
-            "Total Pedestrian Crashes": total_ped_crashes,
-        }
-
-        return [total_crashes]
+            try:
+                data = r.json()
+                for year, year_data in data.items():
+                    try:
+                        if year_data["mode"]:
+                            total_bike_crashes += year_data["mode"].get("Bicyclists", 0)
+                            total_ped_crashes += year_data["mode"].get("Pedestrians", 0)
+                    except TypeError:
+                        print(year_data)
+                total_crashes = {
+                    "Total Bike Crashes": total_bike_crashes,
+                    "Total Pedestrian Crashes": total_ped_crashes,
+                }
+                return [total_crashes]
+            except requests.exceptions.JSONDecodeError:
+                data = r
+                return ["error with crash api"]
 
     def update_study_seg(self, column: str, value):
         """
@@ -696,11 +697,13 @@ if __name__ == "__main__":
     feature = {
         "id": "e6b633b53c6e142d4a29aa24c6669fc8",
         "type": "Feature",
-        "properties": {"name": "nbbb"},
+        "properties": {"name": "test"},
         "geometry": {
             "coordinates": [
-                [-75.65335518430288, 39.9681500205227],
-                [-75.64944680431219, 39.96841746543177],
+                [-74.92209669299876, 39.89138007391739],
+                [-74.91620176906166, 39.890284663442486],
+                [-74.91362273983918, 39.88904788864167],
+                [-74.9068067340369, 39.88551412340129],
             ],
             "type": "LineString",
         },
