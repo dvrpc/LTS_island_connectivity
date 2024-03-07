@@ -644,6 +644,8 @@ class StudySegment:
 
         if isinstance(value, str):
             set_statement = f"set {column} = '{value}'"
+        elif isinstance(value, (int, float)):
+            set_statement = f"set {column} = {value}"
         elif isinstance(value, list):
             value = json.dumps(value)
             set_statement = f"set {column} = '{value}'::json"
