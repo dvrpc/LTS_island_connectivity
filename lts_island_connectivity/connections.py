@@ -644,13 +644,16 @@ class StudySegment:
 
         if isinstance(value, str):
             set_statement = f"set {column} = '{value}'"
-        elif isinstance(value, list) or isinstance(value, int):
+        elif isinstance(value, list):
             value = json.dumps(value)
             set_statement = f"set {column} = '{value}'::json"
+        elif isinstance(value, int):
+            set_statement = f"set {column} = {value}"
         elif value is None:
             set_statement = f"set {column} = NULL"
         else:
-            set_statement = f"set {column} = {value}"
+            value = json.dumps(value)
+            set_statement = f"set {column} = '{value}'::json"
 
         query = f"""
             update {self.network_type}.user_segments
