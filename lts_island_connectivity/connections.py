@@ -644,11 +644,11 @@ class StudySegment:
 
         if isinstance(value, str):
             set_statement = f"set {column} = '{value}'"
-        elif isinstance(value, list):
+        elif isinstance(value, list) or isinstance(value, int):
             value = json.dumps(value)
-            set_statement = f"set {column} = '{value}'"
+            set_statement = f"set {column} = '{value}'::json"
         elif value is None:
-            set_statement = f"set {column} = 0"
+            set_statement = f"set {column} = NULL"
         else:
             set_statement = f"set {column} = {value}"
 
