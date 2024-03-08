@@ -639,31 +639,33 @@ class StudySegment:
 
         :param str column: the column to update in the user_segments table
         :param value: the value you want to put into that column
-
         """
 
-        if isinstance(value, str):
-            set_statement = f"set {column} = '{value}'"
-        elif isinstance(value, (int, float)):
-            set_statement = f"set {column} = {value}"
-        elif isinstance(value, list):
-            value = json.dumps(value)
-            set_statement = f"set {column} = '{value}'::json"
-        elif isinstance(value, int):
-            set_statement = f"set {column} = {value}"
-        elif value is None:
-            set_statement = f"set {column} = NULL"
-        else:
-            value = json.dumps(value)
-            set_statement = f"set {column} = '{value}'::json"
+        try:
+            if isinstance(value, str):
+                set_statement = f"set {column} = '{value}'"
+            elif isinstance(value, (int, float)):
+                set_statement = f"set {column} = {value}"
+            elif isinstance(value, list):
+                value = json.dumps(value)
+                set_statement = f"set {column} = '{value}'::json"
+            elif value is None:
+                set_statement = f"set {column} = NULL"
+            else:
+                value = json.dumps(value)
+                set_statement = f"set {column} = '{value}'::json"
 
-        query = f"""
-            update {self.network_type}.user_segments
-            {set_statement}
-            where id = {self.study_segment_id}
-            and username = '{self.username}'
-        """
-        self.db.execute(query)
+            query = f"""
+                update {self.network_type}.user_segments
+                {set_statement}
+                where id = {self.study_segment_id}
+                and username = '{self.username}'
+            """
+            self.db.execute(query)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            print(f"Failed query: {query}")
+            raise RuntimeError(f"Error updating {column}: {e}")
 
     def summarize_stats(self):
         cols = {
