@@ -288,7 +288,8 @@ class StudySegment:
         study_segment_id = self.db.query_as_singleton(
             f"""
             select id from {self.network_type}.user_segments a
-            where a.seg_name = '{self.segment_name}'"""
+            where a.seg_name = '{self.segment_name}'
+            and a.username = '{self.username}'"""
         )
 
         return study_segment_id
