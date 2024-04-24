@@ -294,7 +294,7 @@ class StudySegment:
 
         return study_segment_id
 
-    def __buffer_study_segment(self, distance: int = 60):
+    def __buffer_study_segment(self, distance: int = 100):
         """
         Creates a buffer around the study segment.
         Default for distance is 30m (100 ft) assuming your data is using meters
@@ -350,7 +350,7 @@ class StudySegment:
         self.db.execute(
             f"""
                 insert into {self.network_type}.user_blobs
-                select a.id, a.username, st_union(st_buffer(a.geom, 60), c.geom) as geom
+                select a.id, a.username, st_union(st_buffer(a.geom, 100), c.geom) as geom
                 from {self.network_type}.user_islands a
                 inner join {self.network_type}.user_segments b
                 on a.id = b.id
