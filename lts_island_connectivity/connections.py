@@ -43,11 +43,12 @@ class StudySegment:
         )
         self.__buffer_study_segment()
         self.__generate_proximate_islands()
-        self.__generate_proximate_blobs()
         self.has_isochrone = None
         self.miles = self.__generate_mileage()
         self.has_isochrone = self.__decide_scope()
+        self.__generate_proximate_blobs()
         self.__handle_parking_lots()
+        self.__update_mileage()
 
         self.total_pop = self.pull_stat(
             self.study_segment_id,
@@ -294,7 +295,7 @@ class StudySegment:
 
         return study_segment_id
 
-    def __buffer_study_segment(self, distance: int = 100):
+    def __buffer_study_segment(self, distance: int = 30):
         """
         Creates a buffer around the study segment.
         Default for distance is 30m (100 ft) assuming your data is using meters
@@ -347,19 +348,22 @@ class StudySegment:
 
         """
 
-        self.db.execute(
-            f"""
-                insert into {self.network_type}.user_blobs
-                select a.id, a.username, st_union(st_buffer(a.geom, 100), c.geom) as geom
-                from {self.network_type}.user_islands a
-                inner join {self.network_type}.user_segments b
-                on a.id = b.id
-                inner join {self.network_type}.user_buffers c
-                on a.id = c.id
-                where b.seg_name = '{self.segment_name}'
-                and b.username = '{self.username}'
-            """
-        )
+        if self.has_isochrone is True:
+            pass
+        else:
+            self.db.execute(
+                f"""
+                    insert into {self.network_type}.user_blobs
+                    select a.id, a.username, st_union(st_buffer(a.geom, 100), c.geom) as geom
+                    from {self.network_type}.user_islands a
+                    inner join {self.network_type}.user_segments b
+                    on a.id = b.id
+                    inner join {self.network_type}.user_buffers c
+                    on a.id = c.id
+                    where b.seg_name = '{self.segment_name}'
+                    and b.username = '{self.username}'
+                """
+            )
 
     def __handle_parking_lots(self):
         """
@@ -434,6 +438,8 @@ class StudySegment:
 
         self.db.execute(
             f"""
+            alter table {self.network_type}.user_isochrones
+            add column if not exists miles FLOAT;
             insert into {self.network_type}.user_isochrones
             WITH arrays AS (
                 select a.id as id, --id of user segment, tied to blobs, buffer, etc
@@ -458,12 +464,31 @@ class StudySegment:
                 ) AS di
                 JOIN {self.network_type}.{self.nodes_table} pt ON di.node = pt.id
             )
-            SELECT (select id from arrays) as id, (select username from arrays), st_concavehull(st_union(st_centroid(b.geom)), .85) AS geom
+            SELECT (select id from arrays) as id, (select username from arrays), st_union(st_buffer(b.geom, 100)) as geom, round(st_length(st_union(b.geom))/1609) as miles
             FROM nodes a
             INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
             WHERE (select seg_name from arrays) = '{self.segment_name}';
+
             """
         )
+
+    def __update_mileage(self):
+        if self.has_isochrone is True:
+            try:
+                query = f"""
+                select a.miles from {self.network_type}.user_isochrones a
+                inner join {self.network_type}.user_segments b
+                on a.id=b.id
+                where b.username = '{self.username}'
+                and b.seg_name= '{self.segment_name}'
+                """
+                self.miles = self.db.query_as_singleton(query)
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                print(f"Failed query: {query}")
+                raise RuntimeError(f"Error updating : {e}")
+        else:
+            pass
 
     def __generate_mileage(self):
         """Returns the mileage of the segment or handles cases where mileage is nothing."""
@@ -705,13 +730,11 @@ if __name__ == "__main__":
     feature = {
         "id": "e6b633b53c6e142d4a29aa24c6669fc8",
         "type": "Feature",
-        "properties": {"name": "test"},
+        "properties": {"name": "philly"},
         "geometry": {
             "coordinates": [
-                [-74.92209669299876, 39.89138007391739],
-                [-74.91620176906166, 39.890284663442486],
-                [-74.91362273983918, 39.88904788864167],
-                [-74.9068067340369, 39.88551412340129],
+                [-75.16631560655193, 39.94005421415005],
+                [-75.15783254981699, 39.93901901924613],
             ],
             "type": "LineString",
         },
