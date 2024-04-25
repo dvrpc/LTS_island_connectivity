@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 import re
 import requests
 from pathlib import Path
+from psycopg2 import OperationalError
 
 
 class SegmentNameConflictError(Exception):
@@ -436,41 +437,46 @@ class StudySegment:
         Creates isochrone based on study_segment
         """
 
-        self.db.execute(
-            f"""
-            alter table {self.network_type}.user_isochrones
-            add column if not exists miles FLOAT;
-            insert into {self.network_type}.user_isochrones
-            WITH arrays AS (
-                select a.id as id, --id of user segment, tied to blobs, buffer, etc
-                a.username,
-                a.seg_name,
-                array_agg(c.{self.ids}) as ids --ids in low stress table
-                FROM {self.network_type}.user_segments a
-                INNER JOIN {self.network_type}.user_buffers b ON a.id = b.id
-                INNER JOIN {self.network_type}.{self.ls_table} c ON st_intersects(b.geom, c.geom)
-                WHERE a.seg_name = '{self.segment_name}'
-                AND a.username = '{self.username}'
-                group by a.id
-            ),
-            nodes AS (
-                SELECT *
-                FROM pgr_drivingDistance(
-                    'SELECT {self.ids} as id, source, target, traveltime_min as cost FROM {self.network_type}.{self.ls_table}', -- example: ls_stress_below_3
-                    (SELECT array_agg("source") FROM {self.network_type}.{self.nodes_table} a
-                     INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
-                     WHERE b.{self.ids}= ANY((SELECT ids FROM arrays)::integer[])), -- Using ANY with integer array
-                    {travel_time}, false
-                ) AS di
-                JOIN {self.network_type}.{self.nodes_table} pt ON di.node = pt.id
-            )
-            SELECT (select id from arrays) as id, (select username from arrays), st_union(st_buffer(b.geom, 100)) as geom, round(st_length(st_union(b.geom))/1609) as miles
-            FROM nodes a
-            INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
-            WHERE (select seg_name from arrays) = '{self.segment_name}';
+        try:
+            self.db.execute(
+                f"""
+                alter table {self.network_type}.user_isochrones
+                add column if not exists miles FLOAT;
+                insert into {self.network_type}.user_isochrones
+                WITH arrays AS (
+                    select a.id as id, --id of user segment, tied to blobs, buffer, etc
+                    a.username,
+                    a.seg_name,
+                    array_agg(c.{self.ids}) as ids --ids in low stress table
+                    FROM {self.network_type}.user_segments a
+                    INNER JOIN {self.network_type}.user_buffers b ON a.id = b.id
+                    INNER JOIN {self.network_type}.{self.ls_table} c ON st_intersects(b.geom, c.geom)
+                    WHERE a.seg_name = '{self.segment_name}'
+                    AND a.username = '{self.username}'
+                    group by a.id
+                ),
+                nodes AS (
+                    SELECT *
+                    FROM pgr_drivingDistance(
+                        'SELECT {self.ids} as id, source, target, traveltime_min as cost FROM {self.network_type}.{self.ls_table}', -- example: ls_stress_below_3
+                        (SELECT array_agg("source") FROM {self.network_type}.{self.nodes_table} a
+                         INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
+                         WHERE b.{self.ids}= ANY((SELECT ids FROM arrays)::integer[])), -- Using ANY with integer array
+                        {travel_time}, false
+                    ) AS di
+                    JOIN {self.network_type}.{self.nodes_table} pt ON di.node = pt.id
+                )
+                SELECT (select id from arrays) as id, (select username from arrays), st_union(st_buffer(b.geom, 100)) as geom, round(st_length(st_union(b.geom))/1609) as miles
+                FROM nodes a
+                INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
+                WHERE (select seg_name from arrays) = '{self.segment_name}';
 
-            """
-        )
+                """
+            )
+        except OperationalError:
+            print(
+                f"failed to create isochrone for this segment, {self.segment_name} for some reason."
+            )
 
     def __update_mileage(self):
         if self.has_isochrone is True:
