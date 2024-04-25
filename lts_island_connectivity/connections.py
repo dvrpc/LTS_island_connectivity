@@ -425,7 +425,7 @@ class StudySegment:
                     OR b.lu15subn = 'Transportation: Facility')
             )
             UPDATE {join_table} AS b
-            SET geom = st_makepolygon(st_exteriorring(ST_Union(a.geom, b.geom)))
+            SET geom = ST_Union(a.geom, b.geom)
             from proximate_lu_and_touching a
             where b.id = {self.study_segment_id}
 
@@ -438,8 +438,7 @@ class StudySegment:
         """
 
         try:
-            self.db.execute(
-                f"""
+            sql = f"""
                 alter table {self.network_type}.user_isochrones
                 add column if not exists miles FLOAT;
                 insert into {self.network_type}.user_isochrones
@@ -472,7 +471,7 @@ class StudySegment:
                 WHERE (select seg_name from arrays) = '{self.segment_name}';
 
                 """
-            )
+            self.db.execute(sql)
         except OperationalError:
             print(
                 f"failed to create isochrone for this segment, {self.segment_name} for some reason."
