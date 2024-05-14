@@ -439,38 +439,43 @@ class StudySegment:
 
         try:
             sql = f"""
-                alter table {self.network_type}.user_isochrones
-                add column if not exists miles FLOAT;
-                insert into {self.network_type}.user_isochrones
-                WITH arrays AS (
-                    select a.id as id, --id of user segment, tied to blobs, buffer, etc
-                    a.username,
-                    a.seg_name,
-                    array_agg(c.{self.ids}) as ids --ids in low stress table
-                    FROM {self.network_type}.user_segments a
-                    INNER JOIN {self.network_type}.user_buffers b ON a.id = b.id
-                    INNER JOIN {self.network_type}.{self.ls_table} c ON st_intersects(b.geom, c.geom)
-                    WHERE a.seg_name = '{self.segment_name}'
-                    AND a.username = '{self.username}'
-                    group by a.id
-                ),
-                nodes AS (
-                    SELECT *
-                    FROM pgr_drivingDistance(
-                        'SELECT {self.ids} as id, source, target, traveltime_min as cost FROM {self.network_type}.{self.ls_table}', -- example: ls_stress_below_3
-                        (SELECT array_agg("source") FROM {self.network_type}.{self.nodes_table} a
-                         INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
-                         WHERE b.{self.ids}= ANY((SELECT ids FROM arrays)::integer[])), -- Using ANY with integer array
-                        {travel_time}, false
-                    ) AS di
-                    JOIN {self.network_type}.{self.nodes_table} pt ON di.node = pt.id
+                    alter table {self.network_type}.user_isochrones
+                    add column if not exists miles FLOAT;
+                    insert into {self.network_type}.user_isochrones
+                    WITH arrays AS (
+                        select a.id as id, --id of user segment, tied to blobs, buffer, etc
+                        a.username,
+                        a.seg_name,
+                        array_agg(c.{self.ids}) as ids --ids in low stress table
+                        FROM {self.network_type}.user_segments a
+                        INNER JOIN {self.network_type}.user_buffers b ON a.id = b.id
+                        INNER JOIN {self.network_type}.{self.ls_table} c ON st_intersects(b.geom, c.geom)
+                        WHERE a.seg_name = '{self.segment_name}'
+                        AND a.username = '{self.username}'
+                        group by a.id
+                    ),
+                    nodes AS (
+                        SELECT *
+                        FROM pgr_drivingDistance(
+                            'SELECT {self.ids} as id, source, target, traveltime_min as cost FROM {self.network_type}.{self.ls_table}', -- example: ls_stress_below_3
+                            (SELECT array_agg("source") FROM {self.network_type}.{self.nodes_table} a
+                             INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
+                             WHERE b.{self.ids}= ANY((SELECT ids FROM arrays)::integer[])), -- Using ANY with integer array
+                            {travel_time}, false
+                        ) AS di
+                        JOIN {self.network_type}.{self.nodes_table} pt ON di.node = pt.id
+                    ),
+                    node_buffer as (
+                        select ST_Union(ST_Buffer(pt.geom, 1000)) AS geom
+                        from nodes n
+                        join {self.network_type}.{self.nodes_table} pt ON n.node = pt.id
                 )
-                SELECT (select id from arrays) as id, (select username from arrays), st_union(st_buffer(b.geom, 100)) as geom, round(st_length(st_union(b.geom))/1609) as miles
-                FROM nodes a
-                INNER JOIN {self.network_type}.{self.ls_table} b ON a.id = b."source"
-                WHERE (select seg_name from arrays) = '{self.segment_name}';
+                    select (select id from arrays) as id, (select username from arrays), st_union(st_buffer(a.geom, 100)) as geom, round(st_length(st_union(a.geom))/1609) as miles
+                        from {self.network_type}.{self.ls_table} a
+                        where st_intersects(a.geom, (select geom from node_buffer))
+                        and (select seg_name from arrays) = '{self.segment_name}';
 
-                """
+                    """
             self.db.execute(sql)
         except OperationalError:
             print(
