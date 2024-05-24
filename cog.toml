@@ -1,4 +1,3 @@
-version = "0.1.0"
 from_latest_tag = true
 ignore_merge_commits = false
 disable_changelog = false
