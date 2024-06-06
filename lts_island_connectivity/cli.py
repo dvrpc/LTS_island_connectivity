@@ -8,7 +8,8 @@ want to use it over the fastapi/react app.
 
 import click
 import geojson
-from . import connections
+from geojson import Feature
+from .connections import StudySegment
 
 
 @click.group()
@@ -26,7 +27,7 @@ def main():
 @click.option(
     "--geojson_path",
     required=True,
-    help="geojson of feature",
+    help="path to geojson of feature(s), handles feature and feature collection",
 )
 @click.option("--username", default="cli_user", help="username for db purposes")
 @click.option(
@@ -34,17 +35,11 @@ def main():
     default=2,
     help="highest comfort level, best to leave at 2",
 )
-@click.option("--overwrite", help="whether or not to overwrite")
+@click.option("--overwrite", help="whether or not to overwrite", type=bool)
 @click.option(
     "--pg_config_filepath",
     help="filepath for pg_config if other than default",
 )
-def open_geojson(path: str):
-    with open(path) as f:
-        gj = geojson.loads(f)
-        return gj
-
-
 def cx(
     network_type,
     geojson_path,
@@ -54,15 +49,39 @@ def cx(
     pg_config_filepath,
 ):
     """
-    Conflates an input table to a base layer.
+    Runs the connections.py file, point to a geojson path on your machine.
     """
     geojson = open_geojson(geojson_path)
 
-    connections(
-        network_type,
-        geojson,
-        username,
-        highest_comfort_level,
-        overwrite,
-        pg_config_filepath,
-    )
+    if geojson.features:
+        for feature in geojson.features:
+            StudySegment(
+                network_type,
+                feature,
+                username,
+                highest_comfort_level,
+                overwrite,
+                pg_config_filepath,
+            )
+    elif geojson.feature:
+        StudySegment(
+            network_type,
+            geojson.feature,
+            username,
+            highest_comfort_level,
+            overwrite,
+            pg_config_filepath,
+        )
+    else:
+        print("not sure how to treat this!")
+
+
+def open_geojson(path: str):
+    with open(path) as f:
+        s = f.read()
+        gj = geojson.loads(s)
+        return gj
+
+
+if __name__ == "__main__":
+    cx()
