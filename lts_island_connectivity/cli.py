@@ -8,7 +8,7 @@ want to use it over the fastapi/react app.
 
 import click
 import geojson
-from connections import StudySegment
+from .connections import StudySegment
 
 
 @click.group()
