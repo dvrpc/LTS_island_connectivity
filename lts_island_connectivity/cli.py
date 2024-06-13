@@ -8,7 +8,7 @@ want to use it over the fastapi/react app.
 
 import click
 import geojson
-from . import connections
+from connections import StudySegment
 
 
 @click.group()
@@ -39,13 +39,6 @@ def main():
     "--pg_config_filepath",
     help="filepath for pg_config if other than default",
 )
-<<<<<<< HEAD
-def open_geojson(path: str):
-    with open(path) as f:
-        gj = geojson.loads(f)
-        return gj
-
-
 def cx(
     network_type,
     geojson_path,
