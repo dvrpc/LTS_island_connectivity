@@ -99,6 +99,28 @@ Note that this only works behind the DVRPC firewall.
 
 If you want to move any of this data to a server, run the makefile behind the firewall, then make a PG_dump of the DB and pg_restore it on your server.
 
+### CLI
+If you don't want to stand up the associated FastAPI application and React app, a CLI is included for convenience. All options are below. If you don't have access to the command, make sure venv
+is activated and type `pip install --editable .` You'll see the segment be processed in the command line, and outputs can be viewed in your database IDE (like dbeaver) or psql. 
+
+```
+❯ connect --help
+Usage: connect [OPTIONS]
+
+  Runs the connections.py file, point to a geojson path on your machine.
+
+Options:
+  --network_type TEXT             type of network: lts or sidewalk ONLY
+  --geojson_path TEXT             path to geojson of feature(s), handles
+                                  feature and feature collection  [required]
+  --username TEXT                 username for db purposes
+  --highest_comfort_level INTEGER
+                                  highest comfort level, best to leave at 2
+  --overwrite BOOLEAN             whether or not to overwrite
+  --pg_config_filepath TEXT       filepath for pg_config if other than default
+  --help                          Show this message and exit.
+```
+
 ### Backups
 You can use the `make backup` command to make a backup of your database. To do so, you need a .env file with the following variables. (or you can just handle the backup on your own)
 

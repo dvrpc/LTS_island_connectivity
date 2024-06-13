@@ -26,7 +26,7 @@ def main():
 @click.option(
     "--geojson_path",
     required=True,
-    help="geojson of feature",
+    help="path to geojson of feature(s), handles feature and feature collection",
 )
 @click.option("--username", default="cli_user", help="username for db purposes")
 @click.option(
@@ -39,6 +39,7 @@ def main():
     "--pg_config_filepath",
     help="filepath for pg_config if other than default",
 )
+<<<<<<< HEAD
 def open_geojson(path: str):
     with open(path) as f:
         gj = geojson.loads(f)
@@ -66,3 +67,40 @@ def cx(
         overwrite,
         pg_config_filepath,
     )
+    """
+    Runs the connections.py file, point to a geojson path on your machine.
+    """
+    geojson = open_geojson(geojson_path)
+
+    if geojson.features:
+        for feature in geojson.features:
+            StudySegment(
+                network_type,
+                feature,
+                username,
+                highest_comfort_level,
+                overwrite,
+                pg_config_filepath,
+            )
+    elif geojson.feature:
+        StudySegment(
+            network_type,
+            geojson.feature,
+            username,
+            highest_comfort_level,
+            overwrite,
+            pg_config_filepath,
+        )
+    else:
+        print("not sure how to treat this!")
+
+
+def open_geojson(path: str):
+    with open(path) as f:
+        s = f.read()
+        gj = geojson.loads(s)
+        return gj
+
+
+if __name__ == "__main__":
+    cx()
