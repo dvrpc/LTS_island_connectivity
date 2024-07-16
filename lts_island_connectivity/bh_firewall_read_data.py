@@ -183,7 +183,7 @@ if __name__ == "__main__":
         on b.trct = c.geoid 
         where job_type = 'JT00'
         and segment = 'S000'
-        and a.dvrpc_reg = true 
+        and a.dvrpc_reg = 1
         group by c.shape
 
         """,
