@@ -48,18 +48,10 @@ def cx(
     pg_config_filepath,
 ):
     """
-    Conflates an input table to a base layer.
+    Runs the LTS / sidewalk analysis on the defined network
     """
     geojson = open_geojson(geojson_path)
 
-    connections(
-        network_type,
-        geojson,
-        username,
-        highest_comfort_level,
-        overwrite,
-        pg_config_filepath,
-    )
     """
     Runs the connections.py file, point to a geojson path on your machine.
     """
