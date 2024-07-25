@@ -134,9 +134,12 @@ class StudySegment:
         )
         self.summarize_stats()
 
+    def __get_name(self):
+        return self.properties.get("name") or self.properties.get("Name")
+
     def __sanitize_name(self):
         """Remove non-standard characters from the segment name"""
-        segment_name = self.properties["name"]
+        segment_name = self.__get_name()
         return re.sub(r"[^a-zA-Z0-9 ]", "", segment_name)
 
     def __update_highest_comfort_level(self):
