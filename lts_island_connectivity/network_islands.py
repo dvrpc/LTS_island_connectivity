@@ -27,7 +27,7 @@ gapslist = [1, 2, 3]
 for value in gapslist:
     stressbelow = value + 1
     db.execute(
-        f"""drop table if exists lts{value}gaps CASCADE;
+        f"""drop table if exists lts.lts{value}gaps CASCADE;
             create table lts.lts{value}gaps as select * from lts.lts_full lf where lf.lts_score::int > {value};
             alter table lts.lts_stress_below_{stressbelow} add column if not exists source integer;
             alter table lts.lts_stress_below_{stressbelow} add column if not exists target integer;
