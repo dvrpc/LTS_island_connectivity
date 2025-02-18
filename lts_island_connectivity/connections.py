@@ -24,10 +24,12 @@ class StudySegment:
         highest_comfort_level: int = 2,
         overwrite: bool = False,
         pg_config_filepath: str = None,
+        override_isochrone_flag: bool = True
     ) -> None:
         self.db = Database.from_config("localhost", pg_config_filepath)
         self.network_type = network_type
         self.highest_comfort_level = highest_comfort_level
+        self.override_isochrone_flag = override_isochrone_flag
         segment_tablenames = self.__update_highest_comfort_level()
         self.highest_comfort_level = segment_tablenames[0]
         self.ls_table = segment_tablenames[1]
@@ -47,6 +49,7 @@ class StudySegment:
         self.has_isochrone = None
         self.miles = self.__generate_mileage()
         self.has_isochrone = self.__decide_scope()
+        
         self.__generate_proximate_blobs()
         self.__handle_parking_lots()
         self.__update_mileage()
@@ -527,8 +530,13 @@ class StudySegment:
         """
         if self.miles > mileage:
             print(f"mileage of nearby islands > {mileage}, creating isochrone")
-            self.__create_isochrone()
-            self.has_isochrone = True
+
+            #TODO: Remove manual override when refactor complete
+            if(self.override_isochrone_flag):
+                self.__create_isochrone()
+                self.has_isochrone = True
+            else:
+                raise ValueError(f"Isochrone flag error: segment@{self.segment_name}")
         else:
             self.has_isochrone = False
         return self.has_isochrone
