@@ -120,9 +120,9 @@ class StudySegment:
         self.jobs = self.pull_stat(
             self.study_segment_id, "total_jobs", "lodes_2020", "polygon"
         )
-        self.bike_ped_crashes = self.pull_crashes(
-            self.study_segment_id,
-        )
+        # self.bike_ped_crashes = self.pull_crashes(
+        #     self.study_segment_id,
+        # )
         self.essential_services = self.pull_stat(
             self.study_segment_id,
             "type",
@@ -735,7 +735,7 @@ class StudySegment:
             "youth": self.youth,
             "circuit": self.circuit,
             "total_jobs": self.jobs,
-            "bike_ped_crashes": self.bike_ped_crashes,
+            "bike_ped_crashes": {'Total Bike Crashes': 0, 'Total Pedestrian Crashes': 0},
             "essential_services": self.essential_services,
             "rail_stations": self.rail_stations,
         }
