@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import re
 import requests
+import time
 from pathlib import Path
 from psycopg2 import OperationalError
 
@@ -442,8 +443,8 @@ class StudySegment:
         """
         Creates isochrone based on study_segment
         """
-
         try:
+            start_time = time.perf_counter()
             sql = f"""
                     alter table {self.network_type}.user_isochrones
                     add column if not exists miles FLOAT;
@@ -483,9 +484,12 @@ class StudySegment:
 
                     """
             self.db.execute(sql)
-        except OperationalError:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"Time taken for isochrone operation: {elapsed_time:.4f} seconds")
+        except Exception as e:
             print(
-                f"failed to create isochrone for this segment, {self.segment_name} for some reason."
+                f"failed to create isochrone for this segment, {self.segment_name}: {e}"
             )
 
     def __update_mileage(self):
@@ -676,7 +680,8 @@ class StudySegment:
                     "Total Pedestrian Crashes": total_ped_crashes,
                 }
                 return [total_crashes]
-            except requests.exceptions.JSONDecodeError:
+            except requests.exceptions.JSONDecodeError as e:
+                print(e)
                 data = r
                 return ["error with crash api"]
 
