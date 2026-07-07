@@ -126,7 +126,7 @@ class StudySegment:
         # )
         self.essential_services = self.pull_stat(
             self.study_segment_id,
-            "type",
+            "category",
             "essential_services",
             "point",
         )
@@ -199,6 +199,7 @@ class StudySegment:
                         bike_ped_crashes JSON,
                         essential_services JSON,
                         rail_stations JSON,
+                        archived BOOL,
                         deleted BOOL,
                         shared BOOL,
                         geom GEOMETRY
@@ -402,8 +403,8 @@ class StudySegment:
         self.db.execute(
             f"""
             WITH proximate_lu AS (
-                SELECT a.geom, c.id, c.seg_name, a.lu15subn
-                FROM landuse_2015 a
+                SELECT a.geom, c.id, c.seg_name, a.lu23subn
+                FROM landuse a
                 INNER JOIN {self.network_type}.user_buffers b
                 ON ST_Intersects(a.geom, b.geom)
                 INNER JOIN {self.network_type}.user_segments c
@@ -411,25 +412,25 @@ class StudySegment:
                 WHERE c.seg_name = '{self.segment_name}'
                 AND c.username = '{self.username}'
                 AND (
-                    a.lu15subn LIKE 'Parking%'
-                    OR a.lu15subn LIKE 'Institutional%'
-                    OR a.lu15subn LIKE 'Commercial%'
-                    OR a.lu15subn = 'Recreation: General'
-                    OR a.lu15subn = 'Transportation: Rail Right-of-Way'
-                    OR a.lu15subn = 'Transportation: Facility')
+                    a.lu23subn LIKE 'Parking%'
+                    OR a.lu23subn LIKE 'Institutional%'
+                    OR a.lu23subn LIKE 'Commercial%'
+                    OR a.lu23subn = 'Recreation: General'
+                    OR a.lu23subn = 'Transportation: Rail Right-of-Way'
+                    OR a.lu23subn = 'Transportation: Facility')
             ),
             proximate_lu_and_touching AS (
                 SELECT st_collect(b.geom, a.geom) as geom
                 FROM proximate_lu a
-                inner JOIN landuse_2015 b
+                inner JOIN landuse b
                 ON ST_Touches(a.geom, b.geom)
                 Where (
-                    b.lu15subn LIKE 'Parking%'
-                    OR b.lu15subn LIKE 'Institutional%'
-                    OR b.lu15subn LIKE 'Commercial%'
-                    OR b.lu15subn = 'Recreation: General'
-                    OR b.lu15subn = 'Transportation: Rail Right-of-Way'
-                    OR b.lu15subn = 'Transportation: Facility')
+                    b.lu23subn LIKE 'Parking%'
+                    OR b.lu23subn LIKE 'Institutional%'
+                    OR b.lu23subn LIKE 'Commercial%'
+                    OR b.lu23subn = 'Recreation: General'
+                    OR b.lu23subn = 'Transportation: Rail Right-of-Way'
+                    OR b.lu23subn = 'Transportation: Facility')
             )
             UPDATE {join_table} AS b
             SET geom = ST_Union(a.geom, b.geom)

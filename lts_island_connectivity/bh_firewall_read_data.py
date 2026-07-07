@@ -28,7 +28,6 @@ from sqlalchemy import create_engine, text
 
 engine = create_engine(f"{DATABASE_URL}")
 
-
 def create_schemas(engine):
     connection = engine.connect()
     query = """
@@ -115,43 +114,43 @@ def setup_user_table():
 if __name__ == "__main__":
     create_schemas(engine)
     import_data(
-        "select *, id as dvrpc_id, lts as lts_score from transportation.lts_network_v2",
+        "select *, gid::integer as dvrpc_id, lts as lts_score from transportation.lts_network",
         "lts.lts_full",
     )
     import_data(
         """
         select
-          a.d_cntest as disabled,
-          a.d_cntmoe as disabled_moe,
-          a.em_cntest as ethnic_minority,
-          a.em_cntmoe as ethnic_minority_moe,
-          a.f_cntest as female,
-          a.f_cntmoe as female_moe,
-          a.fb_cntest as foreign_born,
-          a.fb_cntmoe as foreign_born_moe,
-          a.lep_cntest as lep,
-          a.lep_cntmoe as lep_moe,
-          a.li_cntest as low_income,
-          a.li_cntmoe as low_income_moe,
-          a.oa_cntest as older_adult,
-          a.oa_cntmoe as older_adult_moe,
-          a.rm_cntest as racial_minority,
-          a.rm_cntmoe as racial_minority_moe,
-          a.y_cntest as youth,
-          a.y_cntmoe as youth_moe,
-          a.u_tpopest as total_pop,
-          a.u_tpopmoe as total_pop_moe,
+          a.d_est as disabled,
+          a.d_est_moe as disabled_moe,
+          a.em_est as ethnic_minority,
+          a.em_est_moe as ethnic_minority_moe,
+          a.f_est as female,
+          a.f_est_moe as female_moe,
+          a.fb_est as foreign_born,
+          a.fb_est_moe as foreign_born_moe,
+          a.le_est as lep,
+          a.le_est_moe as lep_moe,
+          a.li_est as low_income,
+          a.li_est_moe as low_income_moe,
+          a.oa_est as older_adult,
+          a.oa_est_moe as older_adult_moe,
+          a.rm_est as racial_minority,
+          a.rm_est_moe as racial_minority_moe,
+          a.y_est as youth,
+          a.y_est_moe as youth_moe,
+          a.tot_pp as total_pop,
+          a.tot_pp_moe as total_pop_moe,
           a.shape
-        from demographics.ipd_2021 a
+        from demographics.ipd_2023 a
         """,
         "censustract2020_demographics",
     )
     import_data(
-        "select * from transportation.pedestriannetwork_lines where feat_type != 'UNMARKED'",
+        "select * from transportation.pedestriannetwork_lines where feat_type != 'UNMARKED' and ST_GeometryType(shape) != 'ST_MultiLineString'",
         "sidewalk.ped_network",
     )
     import_data(
-        "select * from transportation.pedestriannetwork_gaps",
+        "select * from transportation.pedestriannetwork_coverage",
         "sidewalk.ped_network_gaps",
     )
     import_data(
@@ -159,7 +158,49 @@ if __name__ == "__main__":
         "municipalboundaries",
     )
     import_data(
-        "select * from planning.eta_essentialservicespts",
+        f"""
+        SELECT 
+            name AS point_name,
+            'schools_post_secondary' AS category,
+            shape
+        FROM structure.schools_post_secondary
+        UNION ALL
+        SELECT 
+            name AS point_name,
+            'schools_private' AS category,
+            shape
+        FROM structure.schools_private_k12
+        UNION ALL
+        SELECT 
+            name AS point_name,
+            'schools_public' AS category,
+            shape
+        FROM structure.schools_public_k12
+        UNION ALL
+        SELECT 
+            primary_name AS point_name,
+            'health_care' AS category,
+            shape
+        FROM structure.places
+        WHERE primary_category = 'health_and_medical'
+        AND confidence >= 0.6
+        UNION ALL
+        SELECT 
+            primary_name AS point_name,
+            'senior_srv' AS category,
+            shape
+        FROM structure.places
+        WHERE primary_category = 'senior_citizen_services'
+        AND confidence >= 0.6
+        UNION ALL
+        SELECT 
+            primary_name AS point_name,
+            'grocery_store' AS category,
+            shape
+        FROM structure.places
+        WHERE primary_category LIKE '%grocery%'
+        AND confidence >= 0.6
+        """,
         "essential_services",
     )
     import_data(
@@ -171,19 +212,19 @@ if __name__ == "__main__":
         "passengerrailstations",
     )
     import_data(
-        "select * from planning.dvrpc_landuse_2015",
-        "landuse_2015",
+        "select * from planning.dvrpc_landuse_2023",
+        "landuse",
     )
     import_data(
         """
-        select sum(a.c000) as total_jobs, c.shape from economy.lodes_combined_wac a 
-        inner join economy.lodes_xwalk b 
-        on a.w_geocode = b.tabblk2020 
+        select sum(a.c000) as total_jobs, c.shape from economy.combined_wac a 
+        inner join economy.xwalk b 
+        on a.w_geocode = b.tabblk2021 
         inner join demographics.census_tracts_2020 c 
         on b.trct = c.geoid 
         where job_type = 'JT00'
         and segment = 'S000'
-        and a.dvrpc_reg = 1
+        and a.dvrpc_reg = true
         group by c.shape
 
         """,
