@@ -346,7 +346,7 @@ class StudySegment:
                     on a.id = c.id
                     where c.seg_name = '{self.segment_name}'
                     and c.username = '{self.username}'
-                    group by a.id
+                    group by a.id, a.username
             """
         )
 
@@ -460,7 +460,7 @@ class StudySegment:
                         INNER JOIN {self.network_type}.{self.ls_table} c ON st_intersects(b.geom, c.geom)
                         WHERE a.seg_name = '{self.segment_name}'
                         AND a.username = '{self.username}'
-                        group by a.id
+                        group by a.id, a.username, a.seg_name
                     ),
                     nodes AS (
                         SELECT *
