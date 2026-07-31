@@ -138,10 +138,10 @@ if __name__ == "__main__":
           a.rm_est_moe as racial_minority_moe,
           a.y_est as youth,
           a.y_est_moe as youth_moe,
-          a.tot_pp as total_pop,
-          a.tot_pp_moe as total_pop_moe,
+          a.tot_pop as total_pop,
+          a.tot_pop_moe as total_pop_moe,
           a.shape
-        from demographics.ipd_2023 a
+        from demographics.title_vi_indicators_latest a
         """,
         "censustract2020_demographics",
     )

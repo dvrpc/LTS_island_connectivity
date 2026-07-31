@@ -331,8 +331,6 @@ class StudySegment:
 
         self.db.execute(
             f"""
-                alter table {self.network_type}.user_islands
-                add column if not exists size_miles float;
                 insert into {self.network_type}.user_islands
                     select
                         a.id,
@@ -447,8 +445,6 @@ class StudySegment:
         try:
             start_time = time.perf_counter()
             sql = f"""
-                    alter table {self.network_type}.user_isochrones
-                    add column if not exists miles FLOAT;
                     insert into {self.network_type}.user_isochrones
                     WITH arrays AS (
                         select a.id as id, --id of user segment, tied to blobs, buffer, etc
