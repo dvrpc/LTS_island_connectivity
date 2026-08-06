@@ -159,47 +159,47 @@ if __name__ == "__main__":
     )
     import_data(
         f"""
-        SELECT 
-            name AS point_name,
-            'schools_post_secondary' AS category,
-            shape
-        FROM structure.schools_post_secondary
-        UNION ALL
-        SELECT 
-            name AS point_name,
-            'schools_private' AS category,
-            shape
-        FROM structure.schools_private_k12
-        UNION ALL
-        SELECT 
-            name AS point_name,
-            'schools_public' AS category,
-            shape
-        FROM structure.schools_public_k12
-        UNION ALL
-        SELECT 
-            primary_name AS point_name,
-            'health_care' AS category,
-            shape
-        FROM structure.places
-        WHERE primary_category = 'health_and_medical'
-        AND confidence >= 0.6
-        UNION ALL
-        SELECT 
-            primary_name AS point_name,
-            'senior_srv' AS category,
-            shape
-        FROM structure.places
-        WHERE primary_category = 'senior_citizen_services'
-        AND confidence >= 0.6
-        UNION ALL
-        SELECT 
-            primary_name AS point_name,
-            'grocery_store' AS category,
-            shape
-        FROM structure.places
-        WHERE primary_category LIKE '%grocery%'
-        AND confidence >= 0.6
+            SELECT 
+                name AS point_name,
+                'schools_post_secondary' AS category,
+                shape
+            FROM structure.schools_post_secondary
+            UNION ALL
+            SELECT 
+                name AS point_name,
+                'schools_private' AS category,
+                shape
+            FROM structure.schools_private_k12
+            UNION ALL
+            SELECT 
+                name AS point_name,
+                'schools_public' AS category,
+                shape
+            FROM structure.schools_public_k12
+            UNION ALL
+            SELECT 
+                primary_name AS point_name,
+                'health_care' AS category,
+                ST_Transform(ST_SetSRID(shape, 4326), 26918) AS shape
+            FROM structure.places
+            WHERE primary_category = 'health_and_medical'
+            AND confidence >= 0.6
+            UNION ALL
+            SELECT 
+                primary_name AS point_name,
+                'senior_srv' AS category,
+                ST_Transform(ST_SetSRID(shape, 4326), 26918) AS shape
+            FROM structure.places
+            WHERE primary_category = 'senior_citizen_services'
+            AND confidence >= 0.6
+            UNION ALL
+            SELECT 
+                primary_name AS point_name,
+                'grocery_store' AS category,
+                ST_Transform(ST_SetSRID(shape, 4326), 26918) AS shape
+            FROM structure.places
+            WHERE primary_category LIKE '%grocery%'
+            AND confidence >= 0.6
         """,
         "essential_services",
     )
